@@ -48,6 +48,7 @@ use daphne::{
 };
 use prio::codec::{Decode, Encode};
 use std::collections::HashMap;
+use wasm_bindgen::JsValue;
 use worker::*;
 
 pub(crate) const INT_ERR_UNRECOGNIZED_TASK: &str = "unrecognized task";
@@ -463,6 +464,44 @@ impl<D> DapLeader<BearerToken> for DaphneWorkerConfig<D> {
         req: DapRequest<BearerToken>,
     ) -> std::result::Result<DapResponse, DapError> {
         let (payload, mut url) = (req.payload, req.url);
+
+        if matches!(self.deployment, DaphneWorkerDeployment::Demo) {
+            let mut init = RequestInit::new();
+            init.method = Method::Post;
+            if let Some(content_type) = req.media_type {
+                init.headers.set("Content-Type", content_type)?;
+            }
+            if let Some(ref bearer_token) = req.sender_auth {
+                init.headers.set("DAP-Auth-Token", bearer_token.as_ref())?;
+            }
+
+            // TODO(cjpatton) Send the payload in the proper wire format rather than encoding it as
+            // a hex string. This is a workaround for a limitation in the `worker` crate that
+            // requires a JSON object to construct the request body. Once this is fixed, this
+            // function can be refactored to remove the dependency on `reqwest_wasm`.
+            let payload_hex = hex::encode(&payload);
+            init.body = Some(JsValue::from_str(&payload_hex));
+            let req = Request::new_with_init(url.as_str(), &init)?;
+            let service = self.service("DAP_DEMO_HELPER")?;
+            let mut resp = service.fetch_with_request(req).await?;
+            if resp.status_code() == 200 {
+                let content_type = resp
+                    .headers()
+                    .get("Content-Type")?
+                    .ok_or_else(|| DapError::fatal(INT_ERR_PEER_RESP_MISSING_MEDIA_TYPE))?;
+                let media_type = constants::media_type_for(&content_type);
+                return Ok(DapResponse {
+                    payload: resp.bytes().await?,
+                    media_type,
+                });
+            } else if resp.status_code() == 400 {
+                console_error!("request failed: {:?}", resp.text().await?);
+                return Err(DapError::fatal(INT_ERR_PEER_ABORT));
+            } else {
+                console_error!("unexpected response: {:?}", resp);
+                return Err(DapError::fatal(INT_ERR_PEER_ABORT)); // XXX Not the right error
+            }
+        }
 
         // When running in a local development environment, override the hostname of the Helper
         // with localhost.

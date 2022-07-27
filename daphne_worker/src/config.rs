@@ -49,6 +49,7 @@ pub(crate) struct DaphneWorkerConfig<D> {
 
     /// Deployment type. This controls certain behavior overrides relevant to specific deployments.
     pub(crate) deployment: DaphneWorkerDeployment,
+    is_leader: bool,
 
     // TODO(issue#12) Make `bucket_key` and `bucket_count` unique per task.
     bucket_key: Seed<16>,
@@ -121,6 +122,7 @@ impl<D> DaphneWorkerConfig<D> {
         let deployment = if let Ok(deployment) = ctx.var("DAP_DEPLOYMENT") {
             match deployment.to_string().as_str() {
                 "dev" => DaphneWorkerDeployment::Dev,
+                "demo" => DaphneWorkerDeployment::Demo,
                 "prod" => DaphneWorkerDeployment::Prod,
                 s => {
                     return Err(Error::RustError(format!(
@@ -169,6 +171,7 @@ impl<D> DaphneWorkerConfig<D> {
             hpke_receiver_config_list,
             leader_bearer_tokens,
             collector_bearer_tokens,
+            is_leader,
             deployment,
             bucket_key,
             bucket_count,
@@ -197,6 +200,7 @@ impl<D> DaphneWorkerConfig<D> {
             hpke_receiver_config_list: serde_json::from_str(json_hpke_receiver_config_list)?,
             leader_bearer_tokens: HashMap::default(),
             collector_bearer_tokens: None,
+            is_leader: false,
             deployment: DaphneWorkerDeployment::default(),
             bucket_key,
             bucket_count,
@@ -266,6 +270,15 @@ impl<D> DaphneWorkerConfig<D> {
             .durable_object(binding)
     }
 
+    pub(crate) fn service(&self, binding: &str) -> Result<RemoteService> {
+        self.ctx
+            .lock()
+            .map_err(int_err)?
+            .as_ref()
+            .expect("no route context configured")
+            .remote_service(binding)
+    }
+
     pub(crate) fn get_hpke_receiver_config_for(
         &self,
         hpke_config_id: u8,
@@ -300,7 +313,14 @@ impl<D> DaphneWorkerConfig<D> {
             None => None,
         };
 
-        let payload = req.bytes().await?;
+        let payload = if !self.is_leader && matches!(self.deployment, DaphneWorkerDeployment::Demo)
+        {
+            let payload_hex = req.text().await?;
+            hex::decode(&payload_hex).map_err(int_err)?
+        } else {
+            req.bytes().await?
+        };
+
         Ok(DapRequest {
             payload,
             url: req.url()?,
@@ -317,6 +337,11 @@ pub(crate) enum DaphneWorkerDeployment {
     /// Daphne-Worker is running in a local development environment. In this setting, the hostname
     /// of the Leader and Helper URLs are overwritten with localhost.
     Dev,
+
+    /// Daphne-Worker is deployed to Cloudflare Workers, but service bindings are used for
+    /// inter-Aggregator communication. This is not secure, since both Aggregators are running on
+    /// the same Cloudflare. This deployment type is useful for demonstration and/or benchmarking.
+    Demo,
 
     /// Daphne-Worker is running in a production environment. No behavior overrides are applied.
     #[default]
