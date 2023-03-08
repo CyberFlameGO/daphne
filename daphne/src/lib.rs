@@ -164,6 +164,10 @@ pub enum DapAbort {
     #[error("queryMismatch")]
     QueryMismatch,
 
+    /// Round mismatch. The aggregators disagree on the current round of the VDAF preparation protocol.
+    #[error("roundMismatch")]
+    RoundMismatch,
+
     /// Replayed report. Sent in response to an upload request containing a Report that has been replayed.
     //
     // TODO spec: Define this error type.
@@ -217,6 +221,7 @@ impl DapAbort {
             | Self::InvalidProtocolVersion
             | Self::InvalidTask
             | Self::QueryMismatch
+            | Self::RoundMismatch
             | Self::MissingTaskId
             | Self::ReplayedReport
             | Self::ReportTooLate
