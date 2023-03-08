@@ -91,10 +91,10 @@ impl DurableObject for LeaderCollectionJobQueue {
                 // collect request more than once.
                 //
                 // We are serializing the collect_req into binary, and for now we assume the
-                // version is always Draf03 since that works for both Draft02 and Draft03, but
+                // version is always Draft04 since that works for both Draft02 and Draft04, but
                 // if this structure changes further, then version information will need to be
                 // added to this request.
-                let collect_req_bytes = collect_req.get_encoded_with_param(&DapVersion::Draft03);
+                let collect_req_bytes = collect_req.get_encoded_with_param(&DapVersion::Draft04);
                 let mut collect_id_bytes = [0; 32];
                 PrgAes128::seed_stream(
                     self.config.collect_id_key.as_ref().unwrap(),

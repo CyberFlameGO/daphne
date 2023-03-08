@@ -40,9 +40,9 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, convert::TryInto};
 
 const CTX_INPUT_SHARE_DRAFT02: &[u8] = b"dap-02 input share";
-const CTX_INPUT_SHARE_DRAFT03: &[u8] = b"dap-03 input share";
+const CTX_INPUT_SHARE_DRAFT04: &[u8] = b"dap-04 input share";
 const CTX_AGG_SHARE_DRAFT02: &[u8] = b"dap-02 aggregate share";
-const CTX_AGG_SHARE_DRAFT03: &[u8] = b"dap-03 aggregate share";
+const CTX_AGG_SHARE_DRAFT04: &[u8] = b"dap-04 aggregate share";
 const CTX_ROLE_COLLECTOR: u8 = 0;
 const CTX_ROLE_CLIENT: u8 = 1;
 const CTX_ROLE_LEADER: u8 = 2;
@@ -226,7 +226,7 @@ impl VdafConfig {
 
         let input_share_text = match version {
             DapVersion::Draft02 => CTX_INPUT_SHARE_DRAFT02,
-            DapVersion::Draft03 => CTX_INPUT_SHARE_DRAFT03,
+            DapVersion::Draft04 => CTX_INPUT_SHARE_DRAFT04,
             _ => return Err(unimplemented_version()),
         };
         let n: usize = input_share_text.len();
@@ -356,7 +356,7 @@ impl VdafConfig {
 
         let input_share_text = match task_config.version {
             DapVersion::Draft02 => CTX_INPUT_SHARE_DRAFT02,
-            DapVersion::Draft03 => CTX_INPUT_SHARE_DRAFT03,
+            DapVersion::Draft04 => CTX_INPUT_SHARE_DRAFT04,
             _ => return Err(unimplemented_version()),
         };
         let n: usize = input_share_text.len();
@@ -944,7 +944,7 @@ impl VdafConfig {
     ) -> Result<DapAggregateResult, DapError> {
         let agg_share_text = match version {
             DapVersion::Draft02 => CTX_AGG_SHARE_DRAFT02,
-            DapVersion::Draft03 => CTX_AGG_SHARE_DRAFT03,
+            DapVersion::Draft04 => CTX_AGG_SHARE_DRAFT04,
             _ => return Err(unimplemented_version()),
         };
         let n: usize = agg_share_text.len();
@@ -1006,7 +1006,7 @@ fn produce_encrypted_agg_share(
 
     let agg_share_text = match version {
         DapVersion::Draft02 => CTX_AGG_SHARE_DRAFT02,
-        DapVersion::Draft03 => CTX_AGG_SHARE_DRAFT03,
+        DapVersion::Draft04 => CTX_AGG_SHARE_DRAFT04,
         _ => return Err(unimplemented_version_abort()),
     };
     let n: usize = agg_share_text.len();

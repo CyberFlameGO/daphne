@@ -397,7 +397,7 @@ impl ParameterizedEncode<DapVersion> for AggregateInitializeReq {
         self.agg_job_id.encode(bytes);
         match version {
             DapVersion::Draft02 => encode_u16_bytes(bytes, &self.agg_param),
-            DapVersion::Draft03 => encode_u32_bytes(bytes, &self.agg_param),
+            DapVersion::Draft04 => encode_u32_bytes(bytes, &self.agg_param),
             _ => unreachable!("unimplemented version"),
         };
         self.part_batch_sel.encode(bytes);
@@ -415,7 +415,7 @@ impl ParameterizedDecode<DapVersion> for AggregateInitializeReq {
             agg_job_id: Id::decode(bytes)?,
             agg_param: match version {
                 DapVersion::Draft02 => decode_u16_bytes(bytes)?,
-                DapVersion::Draft03 => decode_u32_bytes(bytes)?,
+                DapVersion::Draft04 => decode_u32_bytes(bytes)?,
                 _ => unreachable!("unimplemented version"),
             },
             part_batch_sel: PartialBatchSelector::decode(bytes)?,
@@ -719,7 +719,7 @@ impl ParameterizedEncode<DapVersion> for CollectReq {
         self.query.encode_with_param(version, bytes);
         match version {
             DapVersion::Draft02 => encode_u16_bytes(bytes, &self.agg_param),
-            DapVersion::Draft03 => encode_u32_bytes(bytes, &self.agg_param),
+            DapVersion::Draft04 => encode_u32_bytes(bytes, &self.agg_param),
             _ => panic!("unimplemented DapVersion"),
         };
     }
@@ -735,7 +735,7 @@ impl ParameterizedDecode<DapVersion> for CollectReq {
             query: Query::decode_with_param(decoding_parameter, bytes)?,
             agg_param: match decoding_parameter {
                 DapVersion::Draft02 => decode_u16_bytes(bytes)?,
-                DapVersion::Draft03 => decode_u32_bytes(bytes)?,
+                DapVersion::Draft04 => decode_u32_bytes(bytes)?,
                 _ => panic!("unimplemented DapVersion"),
             },
         })
@@ -788,7 +788,7 @@ impl ParameterizedEncode<DapVersion> for AggregateShareReq {
         self.batch_sel.encode_with_param(version, bytes);
         match version {
             DapVersion::Draft02 => encode_u16_bytes(bytes, &self.agg_param),
-            DapVersion::Draft03 => encode_u32_bytes(bytes, &self.agg_param),
+            DapVersion::Draft04 => encode_u32_bytes(bytes, &self.agg_param),
             _ => panic!("unimplemented DapVersion"),
         };
         self.report_count.encode(bytes);
@@ -806,7 +806,7 @@ impl ParameterizedDecode<DapVersion> for AggregateShareReq {
             batch_sel: BatchSelector::decode_with_param(decoding_parameter, bytes)?,
             agg_param: match decoding_parameter {
                 DapVersion::Draft02 => decode_u16_bytes(bytes)?,
-                DapVersion::Draft03 => decode_u32_bytes(bytes)?,
+                DapVersion::Draft04 => decode_u32_bytes(bytes)?,
                 _ => panic!("unimplemented DapVersion"),
             },
             report_count: u64::decode(bytes)?,

@@ -131,8 +131,8 @@ fn read_agg_init_req() {
     .unwrap();
     assert_eq!(got, want);
     let got = AggregateInitializeReq::get_decoded_with_param(
-        &crate::DapVersion::Draft03,
-        &want.get_encoded_with_param(&crate::DapVersion::Draft03),
+        &crate::DapVersion::Draft04,
+        &want.get_encoded_with_param(&crate::DapVersion::Draft04),
     )
     .unwrap();
     assert_eq!(got, want);
@@ -180,8 +180,8 @@ fn read_agg_share_req() {
     .unwrap();
     assert_eq!(got, want);
     let got = AggregateShareReq::get_decoded_with_param(
-        &DapVersion::Draft03,
-        &want.get_encoded_with_param(&DapVersion::Draft03),
+        &DapVersion::Draft04,
+        &want.get_encoded_with_param(&DapVersion::Draft04),
     )
     .unwrap();
     assert_eq!(got, want);

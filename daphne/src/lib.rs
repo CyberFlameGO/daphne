@@ -287,8 +287,8 @@ pub enum DapVersion {
     #[serde(rename = "v02")]
     Draft02,
 
-    #[serde(rename = "v03")]
-    Draft03,
+    #[serde(rename = "v04")]
+    Draft04,
 
     #[serde(other)]
     #[serde(rename = "unknown_version")]
@@ -299,7 +299,7 @@ impl From<&str> for DapVersion {
     fn from(version: &str) -> Self {
         match version {
             "v02" => DapVersion::Draft02,
-            "v03" => DapVersion::Draft03,
+            "v04" => DapVersion::Draft04,
             _ => DapVersion::Unknown,
         }
     }
@@ -309,7 +309,7 @@ impl AsRef<str> for DapVersion {
     fn as_ref(&self) -> &str {
         match self {
             DapVersion::Draft02 => "v02",
-            DapVersion::Draft03 => "v03",
+            DapVersion::Draft04 => "v04",
             _ => panic!("tried to construct string from unknown DAP version"),
         }
     }

@@ -176,7 +176,7 @@ where
                 media_type: Some(DRAFT02_MEDIA_TYPE_HPKE_CONFIG),
                 payload: hpke_config.as_ref().get_encoded(),
             }),
-            DapVersion::Draft03 => {
+            DapVersion::Draft04 => {
                 let hpke_config_list = HpkeConfigList {
                     hpke_configs: vec![hpke_config.as_ref().clone()],
                 };

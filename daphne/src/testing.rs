@@ -897,7 +897,7 @@ pub(crate) struct AggStore {
 //
 // and
 //
-//     something_draft03
+//     something_draft04
 //
 // that called something(version) with the appropriate version.
 //
@@ -921,7 +921,7 @@ macro_rules! test_versions {
     ($($fname:ident),*) => {
         $(
             test_version! { $fname, Draft02 }
-            test_version! { $fname, Draft03 }
+            test_version! { $fname, Draft04 }
         )*
     };
 }
@@ -943,7 +943,7 @@ macro_rules! async_test_versions {
     ($($fname:ident),*) => {
         $(
             async_test_version! { $fname, Draft02 }
-            async_test_version! { $fname, Draft03 }
+            async_test_version! { $fname, Draft04 }
         )*
     };
 }

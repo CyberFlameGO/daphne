@@ -89,7 +89,7 @@ async fn e2e_leader_endpoint_for_task(version: DapVersion, want_prefix: bool) {
     let expected = if want_prefix {
         format!("/{}/", version.as_ref())
     } else {
-        String::from("/v03/") // Must match DAP_DEFAULT_VERSION
+        String::from("/v04/") // Must match DAP_DEFAULT_VERSION
     };
     assert_eq!(res.endpoint.unwrap(), expected);
 }
@@ -130,7 +130,7 @@ async fn e2e_helper_endpoint_for_task(version: DapVersion, want_prefix: bool) {
     let expected = if want_prefix {
         format!("/{}/", version.as_ref())
     } else {
-        String::from("/v03/") // Must match DAP_DEFAULT_VERSION
+        String::from("/v04/") // Must match DAP_DEFAULT_VERSION
     };
     assert_eq!(res.endpoint.unwrap(), expected);
 }
