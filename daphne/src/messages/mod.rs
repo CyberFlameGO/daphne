@@ -35,47 +35,59 @@ const FIXED_SIZE_QUERY_TYPE_CURRENT_BATCH: u8 = 0x01;
 // Known extension types.
 const EXTENSION_TASKPROV: u16 = 0xff00;
 
-/// The identifier for a DAP task.
-#[derive(Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
-pub struct Id(#[serde(with = "hex")] pub [u8; 32]);
+// Serde doesn't support derivations from const generics properly, so we have to use a macro.
+macro_rules! id_struct {
+    ($sname:ident, $len:expr, $doc:expr) => {
+        #[doc=$doc]
+        #[derive(Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+        pub struct $sname(#[serde(with = "hex")] pub [u8; $len]);
 
-impl Id {
-    /// Return the URL-safe, base64 encoding of the task ID.
-    pub fn to_base64url(&self) -> String {
-        encode_base64url(self.0)
-    }
+        impl $sname {
+            /// Return the URL-safe, base64 encoding of the task ID.
+            pub fn to_base64url(&self) -> String {
+                encode_base64url(self.0)
+            }
 
-    /// Return the ID encoded as a hex string.
-    pub fn to_hex(&self) -> String {
-        hex::encode(self.0)
-    }
+            /// Return the ID encoded as a hex string.
+            pub fn to_hex(&self) -> String {
+                hex::encode(self.0)
+            }
+        }
+
+        impl Encode for $sname {
+            fn encode(&self, bytes: &mut Vec<u8>) {
+                bytes.extend_from_slice(&self.0);
+            }
+        }
+
+        impl Decode for $sname {
+            fn decode(bytes: &mut Cursor<&[u8]>) -> Result<Self, CodecError> {
+                let mut data = [0; $len];
+                bytes.read_exact(&mut data[..])?;
+                Ok($sname(data))
+            }
+        }
+
+        impl AsRef<[u8]> for $sname {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+
+        impl fmt::Display for $sname {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", self.to_hex())
+            }
+        }
+    };
 }
 
-impl Encode for Id {
-    fn encode(&self, bytes: &mut Vec<u8>) {
-        bytes.extend_from_slice(&self.0);
-    }
-}
-
-impl Decode for Id {
-    fn decode(bytes: &mut Cursor<&[u8]>) -> Result<Self, CodecError> {
-        let mut data = [0; 32];
-        bytes.read_exact(&mut data[..])?;
-        Ok(Id(data))
-    }
-}
-
-impl AsRef<[u8]> for Id {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl fmt::Display for Id {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_hex())
-    }
-}
+id_struct!(Id, 32, "The identifier for a DAP task");
+id_struct!(
+    Id16,
+    16,
+    "The identifier for an aggregator job or collection job"
+);
 
 /// A duration.
 pub type Duration = u64;
