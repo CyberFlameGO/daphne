@@ -86,52 +86,18 @@ id_struct!(Id, 32, "The identifier for a DAP task");
 id_struct!(
     Id16,
     16,
-    "The identifier for an aggregator job or collection job"
+    "A 16-byte identifier used aggregation and collection jobs"
 );
+
+// TODO(bhalleycf)  We probabaly should just rename ReportId into Id16, but until
+// I know we want to do this, we just instantiate the macro again.
+id_struct!(ReportId, 16, "The identifier for a report");
 
 /// A duration.
 pub type Duration = u64;
 
 /// The timestamp sent in a [`Report`].
 pub type Time = u64;
-
-/// A report ID.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, Serialize)]
-#[allow(missing_docs)]
-pub struct ReportId(pub [u8; 16]);
-
-impl ReportId {
-    /// Return the ID encoded as a hex string.
-    pub fn to_hex(&self) -> String {
-        hex::encode(self.0)
-    }
-}
-
-impl Encode for ReportId {
-    fn encode(&self, bytes: &mut Vec<u8>) {
-        bytes.extend_from_slice(&self.0);
-    }
-}
-
-impl Decode for ReportId {
-    fn decode(bytes: &mut Cursor<&[u8]>) -> Result<Self, CodecError> {
-        let mut id = [0; 16];
-        bytes.read_exact(&mut id)?;
-        Ok(ReportId(id))
-    }
-}
-
-impl AsRef<[u8]> for ReportId {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl fmt::Display for ReportId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_hex())
-    }
-}
 
 /// Report extensions.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
