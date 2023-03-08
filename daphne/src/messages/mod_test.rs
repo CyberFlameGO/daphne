@@ -7,8 +7,8 @@ use crate::messages::taskprov::{
 use crate::messages::{
     decode_base64url, decode_base64url_vec, encode_base64url, AggregateContinueReq,
     AggregateInitializeReq, AggregateResp, AggregateShareReq, BatchSelector, DapVersion, Extension,
-    HpkeAeadId, HpkeCiphertext, HpkeConfig, HpkeKdfId, HpkeKemId, Id, PartialBatchSelector, Report,
-    ReportId, ReportMetadata, ReportShare, Transition, TransitionVar,
+    HpkeAeadId, HpkeCiphertext, HpkeConfig, HpkeKdfId, HpkeKemId, Id, Id16, IdVar,
+    PartialBatchSelector, Report, ReportId, ReportMetadata, ReportShare, Transition, TransitionVar,
 };
 use crate::taskprov::{compute_task_id, TaskprovVersion};
 use crate::{test_version, test_versions};
@@ -89,7 +89,7 @@ fn read_report_with_unknown_extensions_draft02() {
 fn read_agg_init_req() {
     let want = AggregateInitializeReq {
         task_id: Id([23; 32]),
-        agg_job_id: Id([1; 32]),
+        agg_job_id: IdVar::Id32(Id([1; 32])),
         agg_param: b"this is an aggregation parameter".to_vec(),
         part_batch_sel: PartialBatchSelector::FixedSizeByBatchId {
             batch_id: Id([0; 32]),
@@ -130,6 +130,44 @@ fn read_agg_init_req() {
     )
     .unwrap();
     assert_eq!(got, want);
+
+    let want = AggregateInitializeReq {
+        task_id: Id([23; 32]),
+        agg_job_id: IdVar::Id16(Id16([1; 16])),
+        agg_param: b"this is an aggregation parameter".to_vec(),
+        part_batch_sel: PartialBatchSelector::FixedSizeByBatchId {
+            batch_id: Id([0; 32]),
+        },
+        report_shares: vec![
+            ReportShare {
+                metadata: ReportMetadata {
+                    id: ReportId([99; 16]),
+                    time: 1637361337,
+                    extensions: Vec::default(),
+                },
+                public_share: b"public share".to_vec(),
+                encrypted_input_share: HpkeCiphertext {
+                    config_id: 23,
+                    enc: b"encapsulated key".to_vec(),
+                    payload: b"ciphertext".to_vec(),
+                },
+            },
+            ReportShare {
+                metadata: ReportMetadata {
+                    id: ReportId([17; 16]),
+                    time: 163736423,
+                    extensions: Vec::default(),
+                },
+                public_share: b"public share".to_vec(),
+                encrypted_input_share: HpkeCiphertext {
+                    config_id: 0,
+                    enc: vec![],
+                    payload: b"ciphertext".to_vec(),
+                },
+            },
+        ],
+    };
+
     let got = AggregateInitializeReq::get_decoded_with_param(
         &crate::DapVersion::Draft04,
         &want.get_encoded_with_param(&crate::DapVersion::Draft04),
@@ -142,7 +180,7 @@ fn read_agg_init_req() {
 fn read_agg_cont_req() {
     let want = AggregateContinueReq {
         task_id: Id([23; 32]),
-        agg_job_id: Id([1; 32]),
+        agg_job_id: IdVar::Id32(Id([1; 32])),
         transitions: vec![
             Transition {
                 report_id: ReportId([0; 16]),
@@ -157,7 +195,35 @@ fn read_agg_cont_req() {
         ],
     };
 
-    let got = AggregateContinueReq::get_decoded(&want.get_encoded()).unwrap();
+    let got = AggregateContinueReq::get_decoded_with_param(
+        &crate::DapVersion::Draft02,
+        &want.get_encoded(),
+    )
+    .unwrap();
+    assert_eq!(got, want);
+
+    let want = AggregateContinueReq {
+        task_id: Id([23; 32]),
+        agg_job_id: IdVar::Id16(Id16([1; 16])),
+        transitions: vec![
+            Transition {
+                report_id: ReportId([0; 16]),
+                var: TransitionVar::Continued(b"this is a VDAF-specific message".to_vec()),
+            },
+            Transition {
+                report_id: ReportId([1; 16]),
+                var: TransitionVar::Continued(
+                    b"believe it or not this is *also* a VDAF-specific message".to_vec(),
+                ),
+            },
+        ],
+    };
+
+    let got = AggregateContinueReq::get_decoded_with_param(
+        &crate::DapVersion::Draft04,
+        &want.get_encoded(),
+    )
+    .unwrap();
     assert_eq!(got, want);
 }
 

@@ -13,8 +13,8 @@ use crate::{
     messages::{
         constant_time_eq, decode_base64url, AggregateContinueReq, AggregateInitializeReq,
         AggregateResp, AggregateShareReq, AggregateShareResp, BatchSelector, CollectReq,
-        CollectResp, HpkeConfigList, Id, PartialBatchSelector, Query, Report, ReportId,
-        ReportMetadata, Time, TransitionFailure, TransitionVar,
+        CollectResp, HpkeConfigList, Id, Id16, IdVar, PartialBatchSelector, Query, Report,
+        ReportId, ReportMetadata, Time, TransitionFailure, TransitionVar,
     },
     metrics::DaphneMetrics,
     DapAbort, DapAggregateShare, DapCollectJob, DapError, DapGlobalConfig, DapHelperState,
@@ -222,6 +222,15 @@ macro_rules! leader_post {
     }};
 }
 
+pub fn make_job_id(version: &DapVersion) -> IdVar {
+    let mut rng = thread_rng();
+    match version {
+        DapVersion::Draft02 => IdVar::Id32(Id(rng.gen())),
+        DapVersion::Draft04 => IdVar::Id16(Id16(rng.gen())),
+        _ => unreachable!("unimplemented version"),
+    }
+}
+
 /// DAP Leader functionality.
 #[async_trait(?Send)]
 pub trait DapLeader<'srv, 'req, S>: DapAuthorizedSender<S> + DapAggregator<'srv, 'req, S>
@@ -395,8 +404,6 @@ where
         part_batch_sel: &PartialBatchSelector,
         reports: Vec<Report>,
     ) -> Result<u64, DapAbort> {
-        let mut rng = thread_rng();
-
         // Filter out early rejected reports.
         //
         // TODO Add a test similar to http_post_aggregate_init_expired_task() in roles_test.rs that
@@ -424,7 +431,7 @@ where
             .collect();
 
         // Prepare AggregateInitializeReq.
-        let agg_job_id = Id(rng.gen());
+        let agg_job_id = make_job_id(&task_config.version);
         let transition = task_config
             .vdaf
             .produce_agg_init_req(
@@ -642,7 +649,7 @@ where
     async fn put_helper_state(
         &self,
         task_id: &Id,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
         helper_state: &DapHelperState,
     ) -> Result<(), DapError>;
 
@@ -651,7 +658,7 @@ where
     async fn get_helper_state(
         &self,
         task_id: &Id,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
     ) -> Result<Option<DapHelperState>, DapError>;
 
     /// Handle an HTTP POST to `/aggregate`. The input is either an AggregateInitializeReq or
@@ -817,7 +824,8 @@ where
                 })
             }
             Some(MEDIA_TYPE_AGG_CONT_REQ) => {
-                let agg_cont_req = AggregateContinueReq::get_decoded(&req.payload)?;
+                let agg_cont_req =
+                    AggregateContinueReq::get_decoded_with_param(&req.version, &req.payload)?;
                 let wrapped_task_config = self
                     .get_task_config_for(Cow::Borrowed(req.task_id()?))
                     .await?

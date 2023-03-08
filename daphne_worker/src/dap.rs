@@ -46,8 +46,8 @@ use daphne::{
     constants,
     hpke::HpkeDecrypter,
     messages::{
-        BatchSelector, CollectReq, CollectResp, HpkeCiphertext, Id, PartialBatchSelector, Report,
-        ReportId, ReportMetadata, TransitionFailure,
+        BatchSelector, CollectReq, CollectResp, HpkeCiphertext, Id, IdVar, PartialBatchSelector,
+        Report, ReportId, ReportMetadata, TransitionFailure,
     },
     metrics::DaphneMetrics,
     roles::{early_metadata_check, DapAggregator, DapAuthorizedSender, DapHelper, DapLeader},
@@ -939,7 +939,7 @@ where
     async fn put_helper_state(
         &self,
         task_id: &Id,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
         helper_state: &DapHelperState,
     ) -> std::result::Result<(), DapError> {
         let task_config = self.try_get_task_config(task_id).await?;
@@ -959,7 +959,7 @@ where
     async fn get_helper_state(
         &self,
         task_id: &Id,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
     ) -> std::result::Result<Option<DapHelperState>, DapError> {
         let task_config = self.try_get_task_config(task_id).await?;
         let res: Option<String> = self

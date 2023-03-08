@@ -94,6 +94,39 @@ id_struct!(
 // use a type alias because they cannot be used as constructors.
 id_struct!(ReportId, 16, "The identifier for a report");
 
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub enum IdVar {
+    Id16(Id16),
+    Id32(Id),
+}
+
+impl IdVar {
+    /// Return the URL-safe, base64 encoding of the task ID.
+    pub fn to_base64url(&self) -> String {
+        match &self {
+            Self::Id16(v) => encode_base64url(v),
+            Self::Id32(v) => encode_base64url(v),
+        }
+    }
+
+    /// Return the ID encoded as a hex string.
+    pub fn to_hex(&self) -> String {
+        match &self {
+            Self::Id16(v) => hex::encode(v),
+            Self::Id32(v) => hex::encode(v),
+        }
+    }
+}
+
+impl Encode for IdVar {
+    fn encode(&self, bytes: &mut Vec<u8>) {
+        match &self {
+            Self::Id16(v) => v.encode(bytes),
+            Self::Id32(v) => v.encode(bytes),
+        }
+    }
+}
+
 /// A duration.
 pub type Duration = u64;
 
@@ -364,7 +397,7 @@ impl TryFrom<Query> for BatchSelector {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AggregateInitializeReq {
     pub task_id: Id,
-    pub agg_job_id: Id,
+    pub agg_job_id: IdVar,
     pub agg_param: Vec<u8>,
     pub part_batch_sel: PartialBatchSelector,
     pub report_shares: Vec<ReportShare>,
@@ -391,7 +424,11 @@ impl ParameterizedDecode<DapVersion> for AggregateInitializeReq {
     ) -> Result<Self, CodecError> {
         Ok(Self {
             task_id: Id::decode(bytes)?,
-            agg_job_id: Id::decode(bytes)?,
+            agg_job_id: match version {
+                DapVersion::Draft02 => IdVar::Id32(Id::decode(bytes)?),
+                DapVersion::Draft04 => IdVar::Id16(Id16::decode(bytes)?),
+                _ => unreachable!("unimplemented version"),
+            },
             agg_param: match version {
                 DapVersion::Draft02 => decode_u16_bytes(bytes)?,
                 DapVersion::Draft04 => decode_u32_bytes(bytes)?,
@@ -407,7 +444,7 @@ impl ParameterizedDecode<DapVersion> for AggregateInitializeReq {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AggregateContinueReq {
     pub task_id: Id,
-    pub agg_job_id: Id,
+    pub agg_job_id: IdVar,
     pub transitions: Vec<Transition>,
 }
 
@@ -419,11 +456,18 @@ impl Encode for AggregateContinueReq {
     }
 }
 
-impl Decode for AggregateContinueReq {
-    fn decode(bytes: &mut Cursor<&[u8]>) -> Result<Self, CodecError> {
+impl ParameterizedDecode<DapVersion> for AggregateContinueReq {
+    fn decode_with_param(
+        version: &DapVersion,
+        bytes: &mut Cursor<&[u8]>,
+    ) -> Result<Self, CodecError> {
         Ok(Self {
             task_id: Id::decode(bytes)?,
-            agg_job_id: Id::decode(bytes)?,
+            agg_job_id: match version {
+                DapVersion::Draft02 => IdVar::Id32(Id::decode(bytes)?),
+                DapVersion::Draft04 => IdVar::Id16(Id16::decode(bytes)?),
+                _ => unreachable!("unimplemented version"),
+            },
             transitions: decode_u32_items(&(), bytes)?,
         })
     }

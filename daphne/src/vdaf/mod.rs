@@ -8,7 +8,7 @@ use crate::{
     hpke::HpkeDecrypter,
     messages::{
         encode_u32_bytes, AggregateContinueReq, AggregateInitializeReq, AggregateResp,
-        BatchSelector, Extension, HpkeCiphertext, HpkeConfig, Id, PartialBatchSelector,
+        BatchSelector, Extension, HpkeCiphertext, HpkeConfig, Id, IdVar, PartialBatchSelector,
         PlaintextInputShare, Report, ReportId, ReportMetadata, ReportShare, Time, Transition,
         TransitionFailure, TransitionVar,
     },
@@ -438,7 +438,7 @@ impl VdafConfig {
         decrypter: &impl HpkeDecrypter<'_>,
         task_id: &Id,
         task_config: &DapTaskConfig,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
         part_batch_sel: &PartialBatchSelector,
         reports: Vec<Report>,
         metrics: &DaphneMetrics,
@@ -622,7 +622,7 @@ impl VdafConfig {
     pub(crate) fn handle_agg_resp(
         &self,
         task_id: &Id,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
         state: DapLeaderState,
         agg_resp: AggregateResp,
         metrics: &DaphneMetrics,

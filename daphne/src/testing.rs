@@ -8,7 +8,7 @@ use crate::{
     constants,
     hpke::{HpkeDecrypter, HpkeReceiverConfig},
     messages::{
-        BatchSelector, CollectReq, CollectResp, HpkeCiphertext, HpkeConfig, Id,
+        BatchSelector, CollectReq, CollectResp, HpkeCiphertext, HpkeConfig, Id, IdVar,
         PartialBatchSelector, Report, ReportId, ReportMetadata, Time, TransitionFailure,
     },
     metrics::DaphneMetrics,
@@ -543,7 +543,7 @@ where
     async fn put_helper_state(
         &self,
         task_id: &Id,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
         helper_state: &DapHelperState,
     ) -> Result<(), DapError> {
         let helper_state_info = HelperStateInfo {
@@ -574,7 +574,7 @@ where
     async fn get_helper_state(
         &self,
         task_id: &Id,
-        agg_job_id: &Id,
+        agg_job_id: &IdVar,
     ) -> Result<Option<DapHelperState>, DapError> {
         let helper_state_info = HelperStateInfo {
             task_id: task_id.clone(),
@@ -849,7 +849,7 @@ where
 #[derive(Clone, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub(crate) struct HelperStateInfo {
     task_id: Id,
-    agg_job_id: Id,
+    agg_job_id: IdVar,
 }
 
 /// Stores the reports received from Clients.

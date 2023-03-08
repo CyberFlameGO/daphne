@@ -12,12 +12,14 @@ use crate::{
     hpke::{HpkeDecrypter, HpkeReceiverConfig},
     messages::{
         taskprov, AggregateContinueReq, AggregateInitializeReq, AggregateResp, AggregateShareReq,
-        BatchSelector, CollectReq, CollectResp, Extension, HpkeKemId, Id, Interval,
+        BatchSelector, CollectReq, CollectResp, Extension, HpkeKemId, Id, IdVar, Interval,
         PartialBatchSelector, Query, Report, ReportId, ReportMetadata, ReportShare, Time,
         Transition, TransitionFailure, TransitionVar,
     },
     metrics::DaphneMetrics,
-    roles::{early_metadata_check, DapAggregator, DapAuthorizedSender, DapHelper, DapLeader},
+    roles::{
+        early_metadata_check, make_job_id, DapAggregator, DapAuthorizedSender, DapHelper, DapLeader,
+    },
     taskprov::TaskprovVersion,
     test_version, test_versions,
     testing::{AggStore, DapBatchBucketOwned, MockAggregator, MockAggregatorReportSelector},
@@ -238,7 +240,7 @@ impl Test {
             MEDIA_TYPE_AGG_INIT_REQ,
             AggregateInitializeReq {
                 task_id: task_id.clone(),
-                agg_job_id: Id(rng.gen()),
+                agg_job_id: make_job_id(&task_config.version),
                 agg_param: Vec::default(),
                 part_batch_sel,
                 report_shares,
@@ -250,7 +252,7 @@ impl Test {
 
     async fn gen_test_agg_cont_req(
         &self,
-        agg_job_id: Id,
+        agg_job_id: IdVar,
         transitions: Vec<Transition>,
     ) -> DapRequest<BearerToken> {
         let task_id = &self.time_interval_task_id;
@@ -465,7 +467,7 @@ async fn http_post_aggregate_invalid_batch_sel(version: DapVersion) {
             MEDIA_TYPE_AGG_INIT_REQ,
             AggregateInitializeReq {
                 task_id: task_id.clone(),
-                agg_job_id: Id(rng.gen()),
+                agg_job_id: make_job_id(&task_config.version),
                 agg_param: Vec::default(),
                 part_batch_sel: PartialBatchSelector::FixedSizeByBatchId {
                     batch_id: Id(rng.gen()),
@@ -580,8 +582,9 @@ async_test_versions! { http_get_hpke_config_missing_task_id }
 
 async fn http_post_aggregate_cont_unauthorized_request(version: DapVersion) {
     let t = Test::new(version);
-    let mut rng = thread_rng();
-    let mut req = t.gen_test_agg_cont_req(Id(rng.gen()), Vec::default()).await;
+    let mut req = t
+        .gen_test_agg_cont_req(make_job_id(&version), Vec::default())
+        .await;
     req.sender_auth = None;
 
     // Expect failure due to missing bearer token.
@@ -906,8 +909,9 @@ async_test_versions! { http_post_aggregate_abort_helper_state_overwritten }
 
 async fn http_post_aggregate_fail_send_cont_req(version: DapVersion) {
     let t = Test::new(version);
-    let mut rng = thread_rng();
-    let req = t.gen_test_agg_cont_req(Id(rng.gen()), Vec::default()).await;
+    let req = t
+        .gen_test_agg_cont_req(make_job_id(&version), Vec::default())
+        .await;
 
     // Send aggregate continue request to helper.
     let err = t.helper.http_post_aggregate(&req).await.unwrap_err();

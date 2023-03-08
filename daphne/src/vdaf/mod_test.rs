@@ -7,10 +7,12 @@ use crate::{
     hpke::HpkeReceiverConfig,
     messages::{
         AggregateContinueReq, AggregateInitializeReq, AggregateResp, BatchSelector, HpkeAeadId,
-        HpkeCiphertext, HpkeConfig, HpkeKdfId, HpkeKemId, Id, Interval, PartialBatchSelector,
-        Report, ReportId, ReportShare, Time, Transition, TransitionFailure, TransitionVar,
+        HpkeCiphertext, HpkeConfig, HpkeKdfId, HpkeKemId, Id, IdVar, Interval,
+        PartialBatchSelector, Report, ReportId, ReportShare, Time, Transition, TransitionFailure,
+        TransitionVar,
     },
     metrics::DaphneMetrics,
+    roles::make_job_id,
     test_version, test_versions, DapAbort, DapAggregateResult, DapAggregateShare, DapError,
     DapHelperState, DapHelperTransition, DapLeaderState, DapLeaderTransition, DapLeaderUncommitted,
     DapMeasurement, DapOutputShare, DapQueryConfig, DapTaskConfig, DapVersion, Prio3Config,
@@ -664,7 +666,7 @@ async_test_versions! { helper_state_serialization }
 pub(crate) struct Test {
     now: Time,
     task_id: Id,
-    agg_job_id: Id,
+    agg_job_id: IdVar,
     task_config: DapTaskConfig,
     leader_hpke_receiver_config: HpkeReceiverConfig,
     helper_hpke_receiver_config: HpkeReceiverConfig,
@@ -683,7 +685,7 @@ impl Test {
             .unwrap()
             .as_secs();
         let task_id = Id(rng.gen());
-        let agg_job_id = Id(rng.gen());
+        let agg_job_id = make_job_id(&version);
         let vdaf_verify_key = vdaf.gen_verify_key();
         let leader_hpke_receiver_config =
             HpkeReceiverConfig::gen(rng.gen(), HpkeKemId::X25519HkdfSha256).unwrap();
