@@ -90,7 +90,8 @@ id_struct!(
 );
 
 // TODO(bhalleycf)  We probabaly should just rename ReportId into Id16, but until
-// I know we want to do this, we just instantiate the macro again.
+// I know we want to do this, we just instantiate the macro again.  We can't just
+// use a type alias because they cannot be used as constructors.
 id_struct!(ReportId, 16, "The identifier for a report");
 
 /// A duration.
