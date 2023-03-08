@@ -512,7 +512,7 @@ async fn http_post_aggregate_init_expired_task(version: DapVersion) {
 
     let report = t.gen_test_report(&t.expired_task_id).await;
     let report_share = ReportShare {
-        metadata: report.metadata,
+        metadata: report.report_metadata,
         public_share: report.public_share,
         encrypted_input_share: report.encrypted_input_shares[1].clone(),
     };
@@ -723,7 +723,7 @@ async fn http_post_aggregate_failure_hpke_decrypt_error(version: DapVersion) {
 
     let report = t.gen_test_report(task_id).await;
     let (metadata, public_share, mut encrypted_input_share) = (
-        report.metadata,
+        report.report_metadata,
         report.public_share,
         report.encrypted_input_shares[1].clone(),
     );
@@ -756,7 +756,7 @@ async fn http_post_aggregate_transition_continue(version: DapVersion) {
 
     let report = t.gen_test_report(task_id).await;
     let report_shares = vec![ReportShare {
-        metadata: report.metadata.clone(),
+        metadata: report.report_metadata.clone(),
         public_share: report.public_share,
         // 1st share is for Leader and the rest is for Helpers (note that there is only 1 helper).
         encrypted_input_share: report.encrypted_input_shares[1].clone(),
@@ -781,7 +781,7 @@ async fn http_post_aggregate_failure_report_replayed(version: DapVersion) {
 
     let report = t.gen_test_report(task_id).await;
     let report_shares = vec![ReportShare {
-        metadata: report.metadata.clone(),
+        metadata: report.report_metadata.clone(),
         public_share: report.public_share,
         // 1st share is for Leader and the rest is for Helpers (note that there is only 1 helper).
         encrypted_input_share: report.encrypted_input_shares[1].clone(),
@@ -797,7 +797,9 @@ async fn http_post_aggregate_failure_report_replayed(version: DapVersion) {
             .lock()
             .expect("report_store: failed to lock");
         let report_store = guard.entry(task_id.clone()).or_default();
-        report_store.processed.insert(report.metadata.id.clone());
+        report_store
+            .processed
+            .insert(report.report_metadata.id.clone());
     }
 
     // Get AggregateResp and then extract the transition data from inside.
@@ -827,7 +829,7 @@ async fn http_post_aggregate_failure_batch_collected(version: DapVersion) {
 
     let report = t.gen_test_report(task_id).await;
     let report_shares = vec![ReportShare {
-        metadata: report.metadata.clone(),
+        metadata: report.report_metadata.clone(),
         public_share: report.public_share,
         // 1st share is for Leader and the rest is for Helpers (note that there is only 1 helper).
         encrypted_input_share: report.encrypted_input_shares[1].clone(),
@@ -881,7 +883,7 @@ async fn http_post_aggregate_abort_helper_state_overwritten(version: DapVersion)
 
     let report = t.gen_test_report(task_id).await;
     let report_shares = vec![ReportShare {
-        metadata: report.metadata.clone(),
+        metadata: report.report_metadata.clone(),
         public_share: report.public_share,
         // 1st share is for Leader and the rest is for Helpers (note that there is only 1 helper).
         encrypted_input_share: report.encrypted_input_shares[1].clone(),

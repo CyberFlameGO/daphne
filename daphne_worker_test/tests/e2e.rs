@@ -308,7 +308,7 @@ async fn e2e_leader_upload(version: DapVersion) {
         .body(
             Report {
                 task_id: t.task_id.clone(),
-                metadata: ReportMetadata {
+                report_metadata: ReportMetadata {
                     id: ReportId([1; 16]),
                     time: t.now,
                     extensions: Vec::default(),

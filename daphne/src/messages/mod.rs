@@ -221,7 +221,7 @@ impl ParameterizedDecode<DapVersion> for ReportMetadata {
 #[allow(missing_docs)]
 pub struct Report {
     pub task_id: Id,
-    pub metadata: ReportMetadata,
+    pub report_metadata: ReportMetadata,
     pub public_share: Vec<u8>,
     pub encrypted_input_shares: Vec<HpkeCiphertext>,
 }
@@ -229,7 +229,7 @@ pub struct Report {
 impl ParameterizedEncode<DapVersion> for Report {
     fn encode_with_param(&self, version: &DapVersion, bytes: &mut Vec<u8>) {
         self.task_id.encode(bytes);
-        self.metadata.encode_with_param(version, bytes);
+        self.report_metadata.encode_with_param(version, bytes);
         encode_u32_bytes(bytes, &self.public_share);
         encode_u32_items(bytes, &(), &self.encrypted_input_shares);
     }
@@ -242,7 +242,7 @@ impl ParameterizedDecode<DapVersion> for Report {
     ) -> Result<Self, CodecError> {
         Ok(Self {
             task_id: Id::decode(bytes)?,
-            metadata: ReportMetadata::decode_with_param(version, bytes)?,
+            report_metadata: ReportMetadata::decode_with_param(version, bytes)?,
             public_share: decode_u32_bytes(bytes)?,
             encrypted_input_shares: decode_u32_items(&(), bytes)?,
         })

@@ -45,7 +45,7 @@ fn parse_report_id_hex_from_report(version: DapVersion) {
     let mut rng = thread_rng();
     let report = Report {
         task_id: Id(rng.gen()),
-        metadata: ReportMetadata {
+        report_metadata: ReportMetadata {
             id: ReportId(rng.gen()),
             time: rng.gen(),
             extensions: Vec::default(),
@@ -58,7 +58,7 @@ fn parse_report_id_hex_from_report(version: DapVersion) {
     let key = report_id_hex_from_report(&report_hex).unwrap();
     assert_eq!(
         ReportId::get_decoded_with_param(&version, &hex::decode(key).unwrap()).unwrap(),
-        report.metadata.id
+        report.report_metadata.id
     );
 }
 

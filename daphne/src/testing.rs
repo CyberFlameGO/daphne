@@ -161,7 +161,7 @@ impl MockAggregator {
             // For time-interval queries, the bucket is the batch window computed by truncating the
             // report timestamp.
             DapQueryConfig::TimeInterval => Some(DapBatchBucketOwned::TimeInterval {
-                batch_window: task_config.truncate_time(report.metadata.time),
+                batch_window: task_config.truncate_time(report.report_metadata.time),
             }),
         }
     }
@@ -615,7 +615,7 @@ where
 
         // Check whether Report has been collected or replayed.
         if let Some(transition_failure) = self
-            .check_report_early_fail(&report.task_id, bucket.borrow(), &report.metadata)
+            .check_report_early_fail(&report.task_id, bucket.borrow(), &report.report_metadata)
             .await
         {
             return Err(DapError::Transition(transition_failure));

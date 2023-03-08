@@ -265,7 +265,7 @@ impl VdafConfig {
 
         Ok(Report {
             task_id: task_id.clone(),
-            metadata,
+            report_metadata: metadata,
             public_share,
             encrypted_input_shares,
         })
@@ -447,13 +447,13 @@ impl VdafConfig {
         let mut states = Vec::with_capacity(reports.len());
         let mut seq = Vec::with_capacity(reports.len());
         for report in reports.into_iter() {
-            if processed.contains(&report.metadata.id) {
+            if processed.contains(&report.report_metadata.id) {
                 return Err(DapError::fatal(
                     "tried to process report sequence with non-unique report IDs",
                 )
                 .into());
             }
-            processed.insert(report.metadata.id.clone());
+            processed.insert(report.report_metadata.id.clone());
 
             if &report.task_id != task_id || report.encrypted_input_shares.len() != 2 {
                 return Err(
@@ -472,7 +472,7 @@ impl VdafConfig {
                     true, // is_leader
                     task_id,
                     task_config,
-                    &report.metadata,
+                    &report.report_metadata,
                     &report.public_share,
                     &leader_share,
                 )
@@ -482,11 +482,11 @@ impl VdafConfig {
                     states.push((
                         step,
                         message,
-                        report.metadata.time,
-                        report.metadata.id.clone(),
+                        report.report_metadata.time,
+                        report.report_metadata.id.clone(),
                     ));
                     seq.push(ReportShare {
-                        metadata: report.metadata,
+                        metadata: report.report_metadata,
                         public_share: report.public_share,
                         encrypted_input_share: helper_share,
                     });

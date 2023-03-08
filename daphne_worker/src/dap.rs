@@ -632,7 +632,7 @@ where
                 self.config().durable_name_report_store(
                     task_config.as_ref(),
                     &task_id_hex,
-                    &report.metadata,
+                    &report.report_metadata,
                 ),
                 &report_hex,
             )

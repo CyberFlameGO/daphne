@@ -279,12 +279,12 @@ where
         }
 
         let report = Report::get_decoded_with_param(&req.version, req.payload.as_ref())?;
-        debug!("report id is {}", report.metadata.id);
+        debug!("report id is {}", report.report_metadata.id);
         let task_config = self
             .get_task_config_considering_taskprov(
                 req.version,
                 Cow::Borrowed(req.task_id()?),
-                Some(&report.metadata),
+                Some(&report.report_metadata),
             )
             .await?
             .ok_or(DapAbort::UnrecognizedTask)?;
@@ -310,7 +310,7 @@ where
         }
 
         // Check that the task has not expired.
-        if report.metadata.time >= task_config.as_ref().expiration {
+        if report.report_metadata.time >= task_config.as_ref().expiration {
             return Err(DapAbort::ReportTooLate);
         }
 
@@ -406,13 +406,13 @@ where
             .check_early_reject(
                 task_id,
                 part_batch_sel,
-                reports.iter().map(|report| &report.metadata),
+                reports.iter().map(|report| &report.report_metadata),
             )
             .await?;
         let reports = reports
             .into_iter()
             .filter(|report| {
-                if let Some(failure) = early_rejects.get(&report.metadata.id) {
+                if let Some(failure) = early_rejects.get(&report.report_metadata.id) {
                     self.metrics()
                         .report_counter
                         .with_label_values(&[&format!("rejected_{failure}")])

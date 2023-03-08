@@ -23,7 +23,7 @@ fn read_report(version: DapVersion) {
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
             11, 12, 13, 14, 15, 16,
         ]),
-        metadata: ReportMetadata {
+        report_metadata: ReportMetadata {
             id: ReportId([23; 16]),
             time: 1637364244,
             extensions: vec![],
@@ -57,7 +57,7 @@ fn read_report_with_unknown_extensions_draft02() {
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
             11, 12, 13, 14, 15, 16,
         ]),
-        metadata: ReportMetadata {
+        report_metadata: ReportMetadata {
             id: ReportId([23; 16]),
             time: 1637364244,
             extensions: vec![Extension::Unhandled {

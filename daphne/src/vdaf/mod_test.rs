@@ -90,7 +90,7 @@ async fn roundtrip_report(version: DapVersion) {
             true, // is_leader
             &t.task_id,
             &t.task_config,
-            &report.metadata,
+            &report.report_metadata,
             &report.public_share,
             &report.encrypted_input_shares[0],
         )
@@ -103,7 +103,7 @@ async fn roundtrip_report(version: DapVersion) {
             false, // is_leader
             &t.task_id,
             &t.task_config,
-            &report.metadata,
+            &report.report_metadata,
             &report.public_share,
             &report.encrypted_input_shares[1],
         )
@@ -192,14 +192,14 @@ async fn produce_agg_init_req(version: DapVersion) {
     assert_eq!(agg_init_req.agg_param.len(), 0);
     assert_eq!(agg_init_req.report_shares.len(), 3);
     for (report_shares, report) in agg_init_req.report_shares.iter().zip(reports.iter()) {
-        assert_eq!(report_shares.metadata.id, report.metadata.id);
+        assert_eq!(report_shares.metadata.id, report.report_metadata.id);
     }
 
     let (helper_state, agg_resp) = t.handle_agg_init_req(agg_init_req).await.unwrap_continue();
     assert_eq!(helper_state.seq.len(), 3);
     assert_eq!(agg_resp.transitions.len(), 3);
     for (sub, report) in agg_resp.transitions.iter().zip(reports.iter()) {
-        assert_eq!(sub.report_id, report.metadata.id);
+        assert_eq!(sub.report_id, report.report_metadata.id);
     }
 }
 
@@ -328,12 +328,12 @@ async fn handle_agg_init_req_vdaf_prep_error(version: DapVersion) {
         part_batch_sel: PartialBatchSelector::TimeInterval,
         report_shares: vec![
             ReportShare {
-                metadata: report0.metadata,
+                metadata: report0.report_metadata,
                 public_share: report0.public_share,
                 encrypted_input_share: report0.encrypted_input_shares[1].clone(),
             },
             ReportShare {
-                metadata: report1.metadata,
+                metadata: report1.report_metadata,
                 public_share: report1.public_share,
                 encrypted_input_share: report1.encrypted_input_shares[1].clone(),
             },
