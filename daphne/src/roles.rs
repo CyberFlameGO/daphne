@@ -696,7 +696,7 @@ where
                         .iter()
                         .filter(|share| {
                             share
-                                .metadata
+                                .report_metadata
                                 .is_taskprov(global_config.taskprov_version, task_id)
                         })
                         .count();
@@ -707,7 +707,7 @@ where
                         first_metadata = agg_init_req
                             .report_shares
                             .first()
-                            .map(|report_share| &report_share.metadata);
+                            .map(|report_share| &report_share.report_metadata);
                     } else if using_taskprov != 0 {
                         // It's not all taskprov or no taskprov, so it's an error.
                         return Err(DapAbort::UnrecognizedMessage);
@@ -744,7 +744,7 @@ where
                     agg_init_req
                         .report_shares
                         .iter()
-                        .map(|report_share| &report_share.metadata),
+                        .map(|report_share| &report_share.report_metadata),
                 );
 
                 let transition = task_config

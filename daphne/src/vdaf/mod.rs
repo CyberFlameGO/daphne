@@ -486,7 +486,7 @@ impl VdafConfig {
                         report.report_metadata.id.clone(),
                     ));
                     seq.push(ReportShare {
-                        metadata: report.report_metadata,
+                        report_metadata: report.report_metadata,
                         public_share: report.public_share,
                         encrypted_input_share: helper_share,
                     });
@@ -551,10 +551,10 @@ impl VdafConfig {
         let mut states = Vec::with_capacity(num_reports);
         let mut transitions = Vec::with_capacity(num_reports);
         for report_share in agg_init_req.report_shares.iter() {
-            if processed.contains(&report_share.metadata.id) {
+            if processed.contains(&report_share.report_metadata.id) {
                 return Err(DapAbort::UnrecognizedMessage);
             }
-            processed.insert(report_share.metadata.id.clone());
+            processed.insert(report_share.report_metadata.id.clone());
 
             let var = match self
                 .consume_report_share(
@@ -562,7 +562,7 @@ impl VdafConfig {
                     false, // is_leader
                     &agg_init_req.task_id,
                     task_config,
-                    &report_share.metadata,
+                    &report_share.report_metadata,
                     &report_share.public_share,
                     &report_share.encrypted_input_share,
                 )
@@ -575,8 +575,8 @@ impl VdafConfig {
                     };
                     states.push((
                         step,
-                        report_share.metadata.time,
-                        report_share.metadata.id.clone(),
+                        report_share.report_metadata.time,
+                        report_share.report_metadata.id.clone(),
                     ));
                     TransitionVar::Continued(message_data)
                 }
@@ -593,7 +593,7 @@ impl VdafConfig {
             };
 
             transitions.push(Transition {
-                report_id: report_share.metadata.id.clone(),
+                report_id: report_share.report_metadata.id.clone(),
                 var,
             });
         }

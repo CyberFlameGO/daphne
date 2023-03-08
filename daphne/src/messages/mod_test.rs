@@ -96,7 +96,7 @@ fn read_agg_init_req() {
         },
         report_shares: vec![
             ReportShare {
-                metadata: ReportMetadata {
+                report_metadata: ReportMetadata {
                     id: ReportId([99; 16]),
                     time: 1637361337,
                     extensions: Vec::default(),
@@ -109,7 +109,7 @@ fn read_agg_init_req() {
                 },
             },
             ReportShare {
-                metadata: ReportMetadata {
+                report_metadata: ReportMetadata {
                     id: ReportId([17; 16]),
                     time: 163736423,
                     extensions: Vec::default(),
@@ -140,7 +140,7 @@ fn read_agg_init_req() {
         },
         report_shares: vec![
             ReportShare {
-                metadata: ReportMetadata {
+                report_metadata: ReportMetadata {
                     id: ReportId([99; 16]),
                     time: 1637361337,
                     extensions: Vec::default(),
@@ -153,7 +153,7 @@ fn read_agg_init_req() {
                 },
             },
             ReportShare {
-                metadata: ReportMetadata {
+                report_metadata: ReportMetadata {
                     id: ReportId([17; 16]),
                     time: 163736423,
                     extensions: Vec::default(),
