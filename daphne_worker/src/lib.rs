@@ -284,7 +284,7 @@ impl DaphneWorkerRouter {
         let router = match env.var("DAP_AGGREGATOR_ROLE")?.to_string().as_ref() {
             "leader" => {
                 router
-                    .post_async("/v02/upload", |req, ctx| put_report_into_task(req, ctx))
+                    .post_async("/v02/upload", put_report_into_task)
                     .put_async("/:version/tasks/:task_id/reports", |req, ctx| {
                         put_report_into_task(req, ctx)
                     })

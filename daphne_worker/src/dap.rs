@@ -621,7 +621,7 @@ where
     type ReportSelector = DaphneWorkerReportSelector;
 
     async fn put_report(&self, report: &Report, task_id: &Id) -> std::result::Result<(), DapError> {
-        let task_config = self.try_get_task_config(&task_id).await?;
+        let task_config = self.try_get_task_config(task_id).await?;
         let task_id_hex = task_id.to_hex();
         let report_hex = hex::encode(report.get_encoded_with_param(&task_config.as_ref().version));
         // TODO(bhalleycf)  We have no way of mapping from our DO bucket id back to a task id, and
