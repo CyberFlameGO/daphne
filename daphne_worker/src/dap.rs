@@ -624,6 +624,11 @@ where
         let task_config = self.try_get_task_config(&task_id).await?;
         let task_id_hex = task_id.to_hex();
         let report_hex = hex::encode(report.get_encoded_with_param(&task_config.as_ref().version));
+        // TODO(bhalleycf)  We have no way of mapping from our DO bucket id back to a task id, and
+        // we need the task id for the report when processing, so for now we stick it at the front
+        // of each entry.  This is wasteful since it is the same for every report in this bucket,
+        // put it's not clear what the right long term solution is, so we do this for now.
+        let put_hex = format!("{task_id_hex}{report_hex}");
         let res: ReportsPendingResult = self
             .durable()
             .post(
@@ -634,7 +639,7 @@ where
                     &task_id_hex,
                     &report.report_metadata,
                 ),
-                &report_hex,
+                &put_hex,
             )
             .await
             .map_err(dap_err)?;
@@ -695,8 +700,13 @@ where
                 })?;
                 let task_id = task_id_from_report(&report_bytes)?;
                 let task_config = self.try_get_task_config(&task_id).await?;
-                let report =
-                    Report::get_decoded_with_param(&task_config.as_ref().version, &report_bytes)?;
+                // We know that the report_bytes start with the 32-byte task id in the DO encoding,
+                // and we successfully parsed the task id, so it is safe to reference
+                // &report_bytes[32..] (though it may be empty).
+                let report = Report::get_decoded_with_param(
+                    &task_config.as_ref().version,
+                    &report_bytes[32..],
+                )?;
                 if let Some(reports) = reports_per_task.get_mut(&task_id) {
                     reports.push(report);
                 } else {

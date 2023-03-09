@@ -1074,6 +1074,7 @@ async fn e2e_fixed_size(version: DapVersion, use_current: bool) {
         return;
     }
     let t = TestRunner::fixed_size(version).await;
+    let path = t.upload_path();
     let report_sel = DaphneWorkerReportSelector {
         max_agg_jobs: 100, // Needs to be sufficiently large to touch each bucket.
         max_reports: 100,
@@ -1084,9 +1085,9 @@ async fn e2e_fixed_size(version: DapVersion, use_current: bool) {
 
     // Clients: Upload reports.
     for _ in 0..t.task_config.min_batch_size {
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf
@@ -1184,9 +1185,9 @@ async fn e2e_fixed_size(version: DapVersion, use_current: bool) {
 
     // Clients: Upload reports.
     for _ in 0..2 {
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf

@@ -379,6 +379,102 @@ impl TestRunner {
         );
     }
 
+    pub async fn leader_put_expect_ok(
+        &self,
+        client: &reqwest::Client,
+        path: &str,
+        media_type: &str,
+        data: Vec<u8>,
+    ) {
+        // Draft02 always POSTs
+        if self.version == DapVersion::Draft02 {
+            return self
+                .leader_post_expect_ok(client, path, media_type, data)
+                .await;
+        }
+        let url = self.leader_url.join(path).unwrap();
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(reqwest::header::CONTENT_TYPE, media_type.parse().unwrap());
+        let resp = client
+            .put(url.as_str())
+            .body(data)
+            .send()
+            .await
+            .expect("request failed");
+
+        assert_eq!(
+            reqwest::StatusCode::from_u16(200).unwrap(),
+            resp.status(),
+            "unexpected response status: {:?}",
+            resp.text().await.unwrap()
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn leader_put_expect_abort(
+        &self,
+        client: &reqwest::Client,
+        dap_auth_token: Option<&str>,
+        path: &str,
+        media_type: &str,
+        data: Vec<u8>,
+        expected_status: u16,
+        expected_err_type: &str,
+    ) {
+        // Draft02 always POSTs
+        if self.version == DapVersion::Draft02 {
+            return self
+                .leader_post_expect_abort(
+                    client,
+                    dap_auth_token,
+                    path,
+                    media_type,
+                    data,
+                    expected_status,
+                    expected_err_type,
+                )
+                .await;
+        }
+
+        let url = self.leader_url.join(path).unwrap();
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(reqwest::header::CONTENT_TYPE, media_type.parse().unwrap());
+        if let Some(token) = dap_auth_token {
+            headers.insert(
+                reqwest::header::HeaderName::from_static("dap-auth-token"),
+                reqwest::header::HeaderValue::from_str(token).unwrap(),
+            );
+        }
+
+        let resp = client
+            .put(url.as_str())
+            .body(data)
+            .headers(headers)
+            .send()
+            .await
+            .expect("request failed");
+
+        assert_eq!(
+            reqwest::StatusCode::from_u16(expected_status).unwrap(),
+            resp.status(),
+            "unexpected response status: {:?}",
+            resp.text().await.unwrap()
+        );
+
+        assert_eq!(
+            resp.headers().get("Content-Type").unwrap(),
+            "application/problem+json"
+        );
+
+        let problem_details: serde_json::Value = resp.json().await.unwrap();
+        let got = problem_details.as_object().unwrap().get("type").unwrap();
+        assert_eq!(
+            got,
+            &format!("urn:ietf:params:ppm:dap:error:{}", expected_err_type)
+        );
+    }
+
     pub async fn leader_post_collect_using_token(
         &self,
         client: &reqwest::Client,
@@ -513,6 +609,14 @@ impl TestRunner {
             batch_id
         } else {
             panic!("request to {} failed: response: {:?}", url, resp);
+        }
+    }
+
+    pub fn upload_path(&self) -> String {
+        match self.version {
+            DapVersion::Draft02 => "upload".to_string(),
+            DapVersion::Draft04 => format!("tasks/{}/reports", self.task_id.to_base64url()),
+            _ => unreachable!("unknown version"),
         }
     }
 }
