@@ -620,9 +620,9 @@ where
 {
     type ReportSelector = DaphneWorkerReportSelector;
 
-    async fn put_report(&self, report: &Report) -> std::result::Result<(), DapError> {
-        let task_config = self.try_get_task_config(&report.task_id).await?;
-        let task_id_hex = report.task_id.to_hex();
+    async fn put_report(&self, report: &Report, task_id: &Id) -> std::result::Result<(), DapError> {
+        let task_config = self.try_get_task_config(&task_id).await?;
+        let task_id_hex = task_id.to_hex();
         let report_hex = hex::encode(report.get_encoded_with_param(&task_config.as_ref().version));
         let res: ReportsPendingResult = self
             .durable()
@@ -697,10 +697,10 @@ where
                 let task_config = self.try_get_task_config(&task_id).await?;
                 let report =
                     Report::get_decoded_with_param(&task_config.as_ref().version, &report_bytes)?;
-                if let Some(reports) = reports_per_task.get_mut(&report.task_id) {
+                if let Some(reports) = reports_per_task.get_mut(&task_id) {
                     reports.push(report);
                 } else {
-                    reports_per_task.insert(report.task_id.clone(), vec![report]);
+                    reports_per_task.insert(task_id.clone(), vec![report]);
                 }
             }
         }

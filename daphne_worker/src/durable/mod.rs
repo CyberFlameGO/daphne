@@ -238,13 +238,6 @@ fn durable_name_bucket(bucket: &DapBatchBucket<'_>) -> String {
 }
 
 pub(crate) fn report_id_hex_from_report(report_hex: &str) -> Option<&str> {
-    // task_id (32 bytes)
-    if report_hex.len() < 64 {
-        return None;
-    }
-    let report_hex = &report_hex[64..];
-
-    // metadata.id
     if report_hex.len() < 32 {
         return None;
     }

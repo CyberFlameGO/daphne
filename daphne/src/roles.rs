@@ -241,7 +241,7 @@ where
     type ReportSelector;
 
     /// Store a report for use later on.
-    async fn put_report(&self, report: &Report) -> Result<(), DapError>;
+    async fn put_report(&self, report: &Report, task_id: &Id) -> Result<(), DapError>;
 
     /// Fetch a sequence of reports to aggregate, grouped by task ID, then by partial batch
     /// selector. The reports returned are removed from persistent storage.
@@ -312,7 +312,7 @@ where
         //
         // TODO spec: It's not clear if this behavior is MUST, SHOULD, or MAY.
         if !self
-            .can_hpke_decrypt(&report.task_id, report.encrypted_input_shares[0].config_id)
+            .can_hpke_decrypt(req.task_id()?, report.encrypted_input_shares[0].config_id)
             .await?
         {
             return Err(DapAbort::UnrecognizedHpkeConfig);
@@ -326,7 +326,7 @@ where
         // Store the report for future processing. At this point, the report may be rejected if
         // the Leader detects that the report was replayed or pertains to a batch that has already
         // been collected.
-        Ok(self.put_report(&report).await?)
+        Ok(self.put_report(&report, req.task_id()?).await?)
     }
 
     /// Handle HTTP POST to `/collect`. The input is a [`CollectReq`](crate::messages::CollectReq).

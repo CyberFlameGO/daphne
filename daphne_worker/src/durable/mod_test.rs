@@ -44,7 +44,6 @@ fn durable_name() {
 fn parse_report_id_hex_from_report(version: DapVersion) {
     let mut rng = thread_rng();
     let report = Report {
-        task_id: Id(rng.gen()),
         report_metadata: ReportMetadata {
             id: ReportId(rng.gen()),
             time: rng.gen(),

@@ -206,14 +206,14 @@ impl Test {
         }
     }
 
-    async fn gen_test_upload_req(&self, report: Report) -> DapRequest<BearerToken> {
-        let task_config = self.leader.unchecked_get_task_config(&report.task_id).await;
+    async fn gen_test_upload_req(&self, report: Report, task_id: &Id) -> DapRequest<BearerToken> {
+        let task_config = self.leader.unchecked_get_task_config(task_id).await;
         let version = task_config.version;
 
         DapRequest {
             version,
             media_type: Some(MEDIA_TYPE_REPORT),
-            task_id: Some(report.task_id.clone()),
+            task_id: Some(task_id.clone()),
             payload: report.get_encoded_with_param(&version),
             url: task_config.leader_url.join("upload").unwrap(),
             sender_auth: None,
@@ -928,12 +928,11 @@ async fn http_post_upload_fail_send_invalid_report(version: DapVersion) {
     let task_config = t.leader.unchecked_get_task_config(task_id).await;
 
     // Construct a report payload with an invalid task ID.
-    let mut report_invalid_task_id = t.gen_test_report(task_id).await;
-    report_invalid_task_id.task_id = Id([0; 32]);
+    let report_invalid_task_id = t.gen_test_report(task_id).await;
     let req = DapRequest {
         version: task_config.version,
         media_type: Some(MEDIA_TYPE_REPORT),
-        task_id: Some(report_invalid_task_id.task_id.clone()),
+        task_id: Some(Id([0; 32])),
         payload: report_invalid_task_id.get_encoded_with_param(&task_config.version),
         url: task_config.leader_url.join("upload").unwrap(),
         sender_auth: None,
@@ -949,7 +948,7 @@ async fn http_post_upload_fail_send_invalid_report(version: DapVersion) {
     let mut report_one_input_share = t.gen_test_report(task_id).await;
     report_one_input_share.encrypted_input_shares =
         vec![report_one_input_share.encrypted_input_shares[0].clone()];
-    let req = t.gen_test_upload_req(report_one_input_share).await;
+    let req = t.gen_test_upload_req(report_one_input_share, task_id).await;
 
     // Expect failure due to incorrect number of input shares
     assert_matches!(
@@ -989,7 +988,7 @@ async fn get_reports_empty_response(version: DapVersion) {
     let task_id = &t.time_interval_task_id;
 
     let report = t.gen_test_report(task_id).await;
-    let req = t.gen_test_upload_req(report.clone()).await;
+    let req = t.gen_test_upload_req(report.clone(), task_id).await;
 
     // Upload report.
     t.leader
@@ -1217,7 +1216,7 @@ async fn http_post_collect_fail_overlapping_batch_interval(version: DapVersion) 
 
     // Create a report.
     let report = t.gen_test_report(task_id).await;
-    let req = t.gen_test_upload_req(report.clone()).await;
+    let req = t.gen_test_upload_req(report.clone(), task_id).await;
 
     // Client: Send upload request to Leader.
     t.leader.http_post_upload(&req).await.unwrap();
@@ -1352,7 +1351,7 @@ async fn http_post_fail_wrong_dap_version(version: DapVersion) {
 
     // Send a request with the wrong DAP version.
     let report = t.gen_test_report(task_id).await;
-    let mut req = t.gen_test_upload_req(report).await;
+    let mut req = t.gen_test_upload_req(report, task_id).await;
     req.version = DapVersion::Unknown;
     req.url = task_config.leader_url.join("upload").unwrap();
 
@@ -1367,7 +1366,7 @@ async fn http_post_upload(version: DapVersion) {
     let task_id = &t.time_interval_task_id;
 
     let report = t.gen_test_report(task_id).await;
-    let req = t.gen_test_upload_req(report).await;
+    let req = t.gen_test_upload_req(report, task_id).await;
 
     t.leader
         .http_post_upload(&req)
@@ -1383,7 +1382,7 @@ async fn e2e_time_interval(version: DapVersion) {
     let task_config = t.leader.unchecked_get_task_config(task_id).await;
 
     let report = t.gen_test_report(task_id).await;
-    let req = t.gen_test_upload_req(report).await;
+    let req = t.gen_test_upload_req(report, task_id).await;
 
     // Client: Send upload request to Leader.
     t.leader.http_post_upload(&req).await.unwrap();
@@ -1412,7 +1411,7 @@ async fn e2e_fixed_size(version: DapVersion) {
     let task_config = t.leader.unchecked_get_task_config(task_id).await;
 
     let report = t.gen_test_report(task_id).await;
-    let req = t.gen_test_upload_req(report).await;
+    let req = t.gen_test_upload_req(report, task_id).await;
 
     // Client: Send upload request to Leader.
     t.leader.http_post_upload(&req).await.unwrap();
@@ -1499,11 +1498,10 @@ async fn e2e_taskprov(version: DapVersion) {
         )
         .unwrap();
 
-    let task_id = &report.task_id;
     let req = DapRequest {
         version,
         media_type: Some(MEDIA_TYPE_REPORT),
-        task_id: Some(task_id.clone()),
+        task_id: Some(taskprov_id.clone()),
         payload: report.get_encoded_with_param(&version),
         url: Url::parse("https://cool.biz/upload").unwrap(),
         sender_auth: None,
@@ -1511,16 +1509,19 @@ async fn e2e_taskprov(version: DapVersion) {
     t.leader.http_post_upload(&req).await.unwrap();
 
     // Leader: Run aggregation job.
-    t.run_agg_job(task_id).await.unwrap();
+    t.run_agg_job(&taskprov_id).await.unwrap();
 
     // The Leader is now configured with the task.
-    let task_config = t.leader.unchecked_get_task_config(task_id).await;
+    let task_config = t.leader.unchecked_get_task_config(&taskprov_id).await;
 
     // Collector: Create collection job and poll result.
     let query = Query::FixedSizeByBatchId {
-        batch_id: t.leader.current_batch_id(task_id, &task_config).unwrap(),
+        batch_id: t
+            .leader
+            .current_batch_id(&taskprov_id, &task_config)
+            .unwrap(),
     };
-    t.run_col_job(task_id, &query).await.unwrap();
+    t.run_col_job(&taskprov_id, &query).await.unwrap();
 
     assert_metrics_include!(t.prometheus_registry, {
         r#"test_leader_report_counter{status="aggregated"}"#: 1,

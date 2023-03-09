@@ -307,7 +307,6 @@ async fn e2e_leader_upload(version: DapVersion) {
         .post(url.as_str())
         .body(
             Report {
-                task_id: t.task_id.clone(),
                 report_metadata: ReportMetadata {
                     id: ReportId([1; 16]),
                     time: t.now,

@@ -123,10 +123,14 @@ impl MockAggregator {
     /// Assign the report to a bucket.
     ///
     /// TODO(cjpatton) Figure out if we can avoid returning and owned thing here.
-    async fn assign_report_to_bucket(&self, report: &Report) -> Option<DapBatchBucketOwned> {
+    async fn assign_report_to_bucket(
+        &self,
+        report: &Report,
+        task_id: &Id,
+    ) -> Option<DapBatchBucketOwned> {
         let mut rng = thread_rng();
         let task_config = self
-            .get_task_config_for(Cow::Borrowed(&report.task_id))
+            .get_task_config_for(Cow::Borrowed(task_id))
             .await
             .unwrap()
             .expect("tasks: unrecognized task");
@@ -138,7 +142,7 @@ impl MockAggregator {
                     .leader_state_store
                     .lock()
                     .expect("leader_state_store: failed to lock");
-                let leader_state_store = guard.entry(report.task_id.clone()).or_default();
+                let leader_state_store = guard.entry(task_id.clone()).or_default();
 
                 // Assign the report to the first unsaturated batch.
                 for (batch_id, report_count) in leader_state_store.batch_queue.iter_mut() {
@@ -607,15 +611,15 @@ where
 {
     type ReportSelector = MockAggregatorReportSelector;
 
-    async fn put_report(&self, report: &Report) -> Result<(), DapError> {
+    async fn put_report(&self, report: &Report, task_id: &Id) -> Result<(), DapError> {
         let bucket = self
-            .assign_report_to_bucket(report)
+            .assign_report_to_bucket(report, task_id)
             .await
             .expect("could not determine batch for report");
 
         // Check whether Report has been collected or replayed.
         if let Some(transition_failure) = self
-            .check_report_early_fail(&report.task_id, bucket.borrow(), &report.report_metadata)
+            .check_report_early_fail(task_id, bucket.borrow(), &report.report_metadata)
             .await
         {
             return Err(DapError::Transition(transition_failure));
@@ -627,7 +631,7 @@ where
             .lock()
             .expect("report_store: failed to lock");
         let queue = guard
-            .get_mut(&report.task_id)
+            .get_mut(task_id)
             .expect("report_store: unrecognized task")
             .pending
             .entry(bucket)

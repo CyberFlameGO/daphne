@@ -264,7 +264,6 @@ impl VdafConfig {
         }
 
         Ok(Report {
-            task_id: task_id.clone(),
             report_metadata: metadata,
             public_share,
             encrypted_input_shares,
@@ -454,12 +453,6 @@ impl VdafConfig {
                 .into());
             }
             processed.insert(report.report_metadata.id.clone());
-
-            if &report.task_id != task_id || report.encrypted_input_shares.len() != 2 {
-                return Err(
-                    DapError::fatal("tried to process report with incorrect task ID").into(),
-                );
-            }
 
             let (leader_share, helper_share) = {
                 let mut it = report.encrypted_input_shares.into_iter();

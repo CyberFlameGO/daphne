@@ -249,7 +249,7 @@ impl DaphneWorkerRouter {
         let router = Router::with_data(&state)
             .get_async("/:version/hpke_config", |req, ctx| async move {
                 let daph = ctx.data.handler(&ctx.env);
-                let req = daph.worker_request_to_dap(req).await?;
+                let req = daph.worker_request_to_dap(req, None).await?;
                 match daph
                     .http_get_hpke_config(&req)
                     .instrument(info_span!("hpke_config"))
@@ -284,22 +284,13 @@ impl DaphneWorkerRouter {
         let router = match env.var("DAP_AGGREGATOR_ROLE")?.to_string().as_ref() {
             "leader" => {
                 router
-                    .post_async("/:version/upload", |req, ctx| async move {
-                        let daph = ctx.data.handler(&ctx.env);
-                        let req = daph.worker_request_to_dap(req).await?;
-
-                        match daph
-                            .http_post_upload(&req)
-                            .instrument(info_span!("upload"))
-                            .await
-                        {
-                            Ok(()) => Response::empty(),
-                            Err(e) => abort(e),
-                        }
+                    .post_async("/v02/upload", |req, ctx| put_report_into_task(req, ctx))
+                    .put_async("/:version/tasks/:task_id/reports", |req, ctx| {
+                        put_report_into_task(req, ctx)
                     })
                     .post_async("/:version/collect", |req, ctx| async move {
                         let daph = ctx.data.handler(&ctx.env);
-                        let req = daph.worker_request_to_dap(req).await?;
+                        let req = daph.worker_request_to_dap(req, None).await?;
 
                         match daph
                             .http_post_collect(&req)
@@ -387,7 +378,7 @@ impl DaphneWorkerRouter {
             "helper" => router
                 .post_async("/:version/aggregate", |req, ctx| async move {
                     let daph = ctx.data.handler(&ctx.env);
-                    let req = daph.worker_request_to_dap(req).await?;
+                    let req = daph.worker_request_to_dap(req, None).await?;
 
                     match daph
                         .http_post_aggregate(&req)
@@ -400,7 +391,7 @@ impl DaphneWorkerRouter {
                 })
                 .post_async("/:version/aggregate_share", |req, ctx| async move {
                     let daph = ctx.data.handler(&ctx.env);
-                    let req = daph.worker_request_to_dap(req).await?;
+                    let req = daph.worker_request_to_dap(req, None).await?;
 
                     match daph
                         .http_post_aggregate_share(&req)
@@ -515,6 +506,33 @@ impl DaphneWorkerRouter {
         state.maybe_push_metrics().await?;
 
         result
+    }
+}
+
+async fn put_report_into_task(
+    req: Request,
+    ctx: RouteContext<&DaphneWorkerRequestState<'_>>,
+) -> Result<Response> {
+    // XXX Make thie reusable across multiple methods.
+    let task_id = if let Some(task_id_base64url) = ctx.param("task_id") {
+        if let Some(task_id_bytes) = decode_base64url(task_id_base64url.as_bytes()) {
+            Some(Id(task_id_bytes))
+        } else {
+            todo!("XXX abort properly")
+        }
+    } else {
+        None
+    };
+    let daph = ctx.data.handler(&ctx.env);
+    let req = daph.worker_request_to_dap(req, task_id).await?;
+
+    match daph
+        .http_post_upload(&req)
+        .instrument(info_span!("upload"))
+        .await
+    {
+        Ok(()) => Response::empty(),
+        Err(e) => abort(e),
     }
 }
 

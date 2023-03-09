@@ -838,6 +838,7 @@ impl<'srv> DaphneWorker<'srv> {
     pub(crate) async fn worker_request_to_dap(
         &self,
         mut req: Request,
+        task_id: Option<Id>,
     ) -> Result<DapRequest<BearerToken>> {
         let sender_auth = req.headers().get("DAP-Auth-Token")?.map(BearerToken::from);
         let content_type = req.headers().get("Content-Type")?;
@@ -850,16 +851,18 @@ impl<'srv> DaphneWorker<'srv> {
         let version = self.extract_version_parameter(&req)?;
         let payload = req.bytes().await?;
 
-        // Parse the task ID from the front of the request payload and use it to look up the
-        // expected bearer token.
-        //
-        // TODO(cjpatton) Add regression tests that ensure each protocol message is prefixed by the
-        // task ID.
-        //
-        // TODO spec: Consider moving the task ID out of the payload. Right now we're parsing it
-        // twice so that we have a reference to the task ID before parsing the entire message.
-        let mut r = Cursor::new(payload.as_ref());
-        let task_id = Id::decode(&mut r).ok();
+        let task_id = task_id.or_else(|| {
+            // Parse the task ID from the front of the request payload and use it to look up the
+            // expected bearer token.
+            //
+            // TODO(cjpatton) Add regression tests that ensure each protocol message is prefixed by the
+            // task ID.
+            //
+            // TODO spec: Consider moving the task ID out of the payload. Right now we're parsing it
+            // twice so that we have a reference to the task ID before parsing the entire message.
+            let mut r = Cursor::new(payload.as_ref());
+            Id::decode(&mut r).ok()
+        });
 
         Ok(DapRequest {
             version,

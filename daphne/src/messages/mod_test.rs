@@ -19,10 +19,6 @@ use rand::prelude::*;
 
 fn read_report(version: DapVersion) {
     let report = Report {
-        task_id: Id([
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-            11, 12, 13, 14, 15, 16,
-        ]),
         report_metadata: ReportMetadata {
             id: ReportId([23; 16]),
             time: 1637364244,
@@ -53,10 +49,6 @@ test_versions! {read_report}
 #[test]
 fn read_report_with_unknown_extensions_draft02() {
     let report = Report {
-        task_id: Id([
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-            11, 12, 13, 14, 15, 16,
-        ]),
         report_metadata: ReportMetadata {
             id: ReportId([23; 16]),
             time: 1637364244,
