@@ -612,12 +612,16 @@ impl TestRunner {
         }
     }
 
-    pub fn upload_path(&self) -> String {
+    pub fn upload_path_for_task(&self, id: &Id) -> String {
         match self.version {
             DapVersion::Draft02 => "upload".to_string(),
-            DapVersion::Draft04 => format!("tasks/{}/reports", self.task_id.to_base64url()),
+            DapVersion::Draft04 => format!("tasks/{}/reports", id.to_base64url()),
             _ => unreachable!("unknown version"),
         }
+    }
+
+    pub fn upload_path(&self) -> String {
+        self.upload_path_for_task(&self.task_id)
     }
 }
 

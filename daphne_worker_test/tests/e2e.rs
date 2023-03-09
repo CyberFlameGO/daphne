@@ -184,7 +184,7 @@ async fn e2e_leader_upload(version: DapVersion) {
     let mut rng = thread_rng();
     let client = t.http_client();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
-    let path = "upload";
+    let path = t.upload_path();
 
     // Generate and upload a report.
     let report = t
@@ -198,19 +198,19 @@ async fn e2e_leader_upload(version: DapVersion) {
             version,
         )
         .unwrap();
-    t.leader_post_expect_ok(
+    t.leader_put_expect_ok(
         &client,
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
     )
     .await;
 
     // Try uploading the same report a second time (expect failure due to repeated ID.
-    t.leader_post_expect_abort(
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
         400,
@@ -219,17 +219,19 @@ async fn e2e_leader_upload(version: DapVersion) {
     .await;
 
     // Try uploading a report with the incorrect task ID.
-    t.leader_post_expect_abort(
+    let bad_id = Id(rng.gen());
+    let bad_path = t.upload_path_for_task(&bad_id);
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &bad_path,
         constants::MEDIA_TYPE_REPORT,
         t.task_config
             .vdaf
             .produce_report(
                 &hpke_config_list,
                 t.now,
-                &Id(rng.gen()),
+                &bad_id,
                 DapMeasurement::U64(999),
                 version,
             )
@@ -253,10 +255,10 @@ async fn e2e_leader_upload(version: DapVersion) {
         )
         .unwrap();
     report.encrypted_input_shares[0].config_id ^= 0xff;
-    t.leader_post_expect_abort(
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
         400,
@@ -265,10 +267,10 @@ async fn e2e_leader_upload(version: DapVersion) {
     .await;
 
     // Try uploading a malformed report.
-    t.leader_post_expect_abort(
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         b"junk data".to_vec(),
         400,
@@ -288,10 +290,10 @@ async fn e2e_leader_upload(version: DapVersion) {
             version,
         )
         .unwrap();
-    t.leader_post_expect_abort(
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
         400,
@@ -302,9 +304,13 @@ async fn e2e_leader_upload(version: DapVersion) {
     // Upload a fixed report. This is a sanity check to make sure that the test resets the Leader's
     // state each time the test is run. If it didn't, this would result in an error due to the
     // report ID being repeated.
-    let url = t.leader_url.join(path).unwrap();
-    let resp = client
-        .post(url.as_str())
+    let url = t.leader_url.join(&path).unwrap();
+    let builder = match t.version {
+        DapVersion::Draft02 => client.post(url.as_str()),
+        DapVersion::Draft04 => client.put(url.as_str()),
+        _ => unreachable!("unknown version"),
+    };
+    let resp = builder
         .body(
             Report {
                 report_metadata: ReportMetadata {
@@ -348,7 +354,7 @@ async fn e2e_leader_upload_taskprov() {
     let t = TestRunner::default_with_version(version).await;
     let client = t.http_client();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
-    let path = "upload";
+    let path = t.upload_path();
 
     // Generate and upload a report with taskprov.
     //
@@ -393,9 +399,9 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_post_expect_ok(
+    t.leader_put_expect_ok(
         &client,
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
     )
@@ -419,10 +425,10 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_post_expect_abort(
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
         400,
@@ -451,10 +457,10 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_post_expect_abort(
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
         400,
@@ -500,10 +506,10 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_post_expect_abort(
+    t.leader_put_expect_abort(
         &client,
         None, // dap_auth_token
-        path,
+        &path,
         constants::MEDIA_TYPE_REPORT,
         report.get_encoded_with_param(&version),
         400,
@@ -514,6 +520,7 @@ async fn e2e_leader_upload_taskprov() {
 
 async fn e2e_internal_leader_process(version: DapVersion) {
     let t = TestRunner::default_with_version(version).await;
+    let path = t.upload_path();
 
     let client = t.http_client();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
@@ -529,9 +536,9 @@ async fn e2e_internal_leader_process(version: DapVersion) {
     let mut rng = thread_rng();
     for _ in 0..report_sel.max_reports + 3 {
         let now = rng.gen_range(t.report_interval(&batch_interval));
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf
@@ -576,14 +583,15 @@ async fn e2e_leader_process_min_agg_rate(version: DapVersion) {
     let client = t.http_client();
     let batch_interval = t.batch_interval();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
+    let path = t.upload_path();
 
     // The reports are uploaded in the background.
     let mut rng = thread_rng();
     for _ in 0..7 {
         let now = rng.gen_range(t.report_interval(&batch_interval));
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf
@@ -624,14 +632,15 @@ async fn e2e_leader_collect_ok(version: DapVersion) {
 
     let client = t.http_client();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
+    let path = t.upload_path();
 
     // The reports are uploaded in the background.
     let mut rng = thread_rng();
     for _ in 0..t.task_config.min_batch_size {
         let now = rng.gen_range(t.report_interval(&batch_interval));
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf
@@ -749,14 +758,15 @@ async fn e2e_leader_collect_ok_interleaved(version: DapVersion) {
     let client = t.http_client();
     let batch_interval = t.batch_interval();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
+    let path = t.upload_path();
 
     // The reports are uploaded in the background.
     let mut rng = thread_rng();
     for _ in 0..t.task_config.min_batch_size {
         let now = rng.gen_range(t.report_interval(&batch_interval));
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf
@@ -812,14 +822,15 @@ async fn e2e_leader_collect_not_ready_min_batch_size(version: DapVersion) {
     let batch_interval = t.batch_interval();
     let client = t.http_client();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
+    let path = t.upload_path();
 
     // A number of reports are uploaded, but not enough to meet the minimum batch requirement.
     let mut rng = thread_rng();
     for _ in 0..t.task_config.min_batch_size - 1 {
         let now = rng.gen_range(t.report_interval(&batch_interval));
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf
@@ -977,14 +988,15 @@ async fn e2e_leader_collect_abort_overlapping_batch_interval(version: DapVersion
     let batch_interval = t.batch_interval();
     let client = t.http_client();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
+    let path = t.upload_path();
 
     // The reports are uploaded in the background.
     let mut rng = thread_rng();
     for _ in 0..t.task_config.min_batch_size {
         let now = rng.gen_range(t.report_interval(&batch_interval));
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             t.task_config
                 .vdaf
@@ -1288,6 +1300,7 @@ async fn e2e_leader_collect_taskprov_ok(version: DapVersion) {
         &t.taskprov_collector_hpke_receiver.config,
     )
     .unwrap();
+    let path = t.upload_path_for_task(&task_id);
 
     // The reports are uploaded in the background.
     let mut rng = thread_rng();
@@ -1296,9 +1309,9 @@ async fn e2e_leader_collect_taskprov_ok(version: DapVersion) {
             payload: payload.clone(),
         }];
         let now = rng.gen_range(t.report_interval(&batch_interval));
-        t.leader_post_expect_ok(
+        t.leader_put_expect_ok(
             &client,
-            "upload",
+            &path,
             constants::MEDIA_TYPE_REPORT,
             task_config
                 .vdaf
