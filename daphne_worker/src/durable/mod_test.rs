@@ -53,8 +53,10 @@ fn parse_report_id_hex_from_report(version: DapVersion) {
         encrypted_input_shares: Vec::default(),
     };
 
+    let task_id = Id([17; 32]);
     let report_hex = hex::encode(report.get_encoded_with_param(&version));
-    let key = report_id_hex_from_report(&report_hex).unwrap();
+    let do_hex = format!("{}{}", task_id.to_hex(), report_hex);
+    let key = report_id_hex_from_report(&do_hex).unwrap();
     assert_eq!(
         ReportId::get_decoded_with_param(&version, &hex::decode(key).unwrap()).unwrap(),
         report.report_metadata.id
