@@ -626,12 +626,20 @@ where
         let task_config = self.try_get_task_config(task_id).await?;
         let task_id_hex = task_id.to_hex();
         let report_hex = hex::encode(report.get_encoded_with_param(&task_config.as_ref().version));
-        // TODO(bhalleycf)  We have no way of mapping from our DO bucket id back to a task id, and
-        // we need the task id for the report when processing, so for now we stick it at the front
-        // of each entry.  This is wasteful since it is the same for every report in this bucket,
-        // put it's not clear what the right long term solution is, so we do this for now.
+        // We need to know if this is an old-style draft02 serialized report or a draft04-and-later style
+        // report, so we make the first byte of the hex be a version indicator.  Note that "04" means
+        // "draft04 or later".
         let prefix = if report.task_id.is_none() { "04" } else { "02" };
-        let put_hex = format!("{prefix}{task_id_hex}{report_hex}");
+        // TODO(bhalleycf)  We have no way of mapping from our DO bucket id back to a task id, and
+        // we need the task id for the report when processing, so if we have a report without a task id
+        // we add one.  This is wasteful since it is the same for every report in this bucket,
+        // put it's not clear what the right long term solution is, so we do this for now.
+        let encoded_task_id_hex = if report.task_id.is_none() {
+            &task_id_hex
+        } else {
+            ""
+        };
+        let put_hex = format!("{prefix}{encoded_task_id_hex}{report_hex}");
         let res: ReportsPendingResult = self
             .durable()
             .post(
@@ -703,12 +711,10 @@ where
                 })?;
                 let task_id = task_id_from_report(&report_bytes)?;
                 let task_config = self.try_get_task_config(&task_id).await?;
-                // We know that the report_bytes starts with a 1-byte version id and a 32-byte task
-                // id in the DO encoding, and we successfully parsed the task id, so it is safe to
-                // reference &report_bytes[33..] (though it may be empty).
+                let offset = if report_bytes[0] == 0x02 { 1 } else { 33 };
                 let report = Report::get_decoded_with_param(
                     &task_config.as_ref().version,
-                    &report_bytes[33..],
+                    &report_bytes[offset..],
                 )?;
                 if let Some(reports) = reports_per_task.get_mut(&task_id) {
                     reports.push(report);

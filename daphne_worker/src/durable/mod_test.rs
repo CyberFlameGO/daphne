@@ -65,8 +65,13 @@ fn parse_report_id_hex_from_report(version: DapVersion) {
         // This is Draft04 and later
         "04"
     };
+    let encoded_task_id = if version == DapVersion::Draft02 {
+        "".to_string()
+    } else {
+        task_id.to_hex()
+    };
     let report_hex = hex::encode(report.get_encoded_with_param(&version));
-    let do_hex = format!("{}{}{}", prefix, task_id.to_hex(), report_hex);
+    let do_hex = format!("{}{}{}", prefix, encoded_task_id, report_hex);
     let key = report_id_hex_from_report(&do_hex).unwrap();
     assert_eq!(
         ReportId::get_decoded_with_param(&version, &hex::decode(key).unwrap()).unwrap(),
