@@ -262,8 +262,14 @@ impl VdafConfig {
                 payload,
             });
         }
+        let report_task_id = if version == DapVersion::Draft02 {
+            Some(task_id.clone())
+        } else {
+            None
+        };
 
         Ok(Report {
+            task_id: report_task_id,
             report_metadata: metadata,
             public_share,
             encrypted_input_shares,

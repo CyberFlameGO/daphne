@@ -238,10 +238,18 @@ fn durable_name_bucket(bucket: &DapBatchBucket<'_>) -> String {
 }
 
 pub(crate) fn report_id_hex_from_report(report_hex: &str) -> Option<&str> {
-    if report_hex.len() < 96 {
+    if report_hex.len() < 2 {
         return None;
     }
-    Some(&report_hex[64..96])
+    let offset = match &report_hex[0..2] {
+        "02" => 2 + 128,
+        "04" => 2 + 64,
+        _ => return None,
+    };
+    if report_hex.len() < offset + 32 {
+        return None;
+    }
+    Some(&report_hex[offset..offset + 32])
 }
 
 /// Reference to a DO instance, used by the garbage collector.

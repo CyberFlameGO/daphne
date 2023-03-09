@@ -604,12 +604,14 @@ where
 }
 
 fn task_id_from_report(report: &[u8]) -> std::result::Result<Id, DapError> {
-    // The task id MUST BE the first 32 bytes of the serialized report; if this
+    // The DAP encoding hint, either 0x02 or 0x04 must be the first byte of the
+    // serialized report.
+    // The task id MUST BE the next 32 bytes of the serialized report; if this
     // needs to change in the future, then we must change the DO serialization
     // format to contain a version.
-    let id = Id(report[..32]
+    let id = Id(report[1..33]
         .try_into()
-        .map_err(|_| DapError::fatal("serialize report is too short"))?);
+        .map_err(|_| DapError::fatal("serialized report is too short"))?);
     Ok(id)
 }
 
@@ -628,7 +630,8 @@ where
         // we need the task id for the report when processing, so for now we stick it at the front
         // of each entry.  This is wasteful since it is the same for every report in this bucket,
         // put it's not clear what the right long term solution is, so we do this for now.
-        let put_hex = format!("{task_id_hex}{report_hex}");
+        let prefix = if report.task_id.is_none() { "04" } else { "02" };
+        let put_hex = format!("{prefix}{task_id_hex}{report_hex}");
         let res: ReportsPendingResult = self
             .durable()
             .post(
@@ -700,12 +703,12 @@ where
                 })?;
                 let task_id = task_id_from_report(&report_bytes)?;
                 let task_config = self.try_get_task_config(&task_id).await?;
-                // We know that the report_bytes start with the 32-byte task id in the DO encoding,
-                // and we successfully parsed the task id, so it is safe to reference
-                // &report_bytes[32..] (though it may be empty).
+                // We know that the report_bytes starts with a 1-byte version id and a 32-byte task
+                // id in the DO encoding, and we successfully parsed the task id, so it is safe to
+                // reference &report_bytes[33..] (though it may be empty).
                 let report = Report::get_decoded_with_param(
                     &task_config.as_ref().version,
-                    &report_bytes[32..],
+                    &report_bytes[33..],
                 )?;
                 if let Some(reports) = reports_per_task.get_mut(&task_id) {
                     reports.push(report);

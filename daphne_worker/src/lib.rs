@@ -513,7 +513,7 @@ async fn put_report_into_task(
     req: Request,
     ctx: RouteContext<&DaphneWorkerRequestState<'_>>,
 ) -> Result<Response> {
-    // XXX Make thie reusable across multiple methods.
+    // XXX Make this reusable across multiple methods.
     let task_id = if let Some(task_id_base64url) = ctx.param("task_id") {
         if let Some(task_id_bytes) = decode_base64url(task_id_base64url.as_bytes()) {
             Some(Id(task_id_bytes))

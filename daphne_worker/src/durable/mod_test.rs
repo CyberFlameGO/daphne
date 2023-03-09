@@ -42,8 +42,14 @@ fn durable_name() {
 // hex-encoded report. This helps ensure that changes to the `Report` wire format don't cause any
 // regressions to `ReportStore`.
 fn parse_report_id_hex_from_report(version: DapVersion) {
+    let task_id = Id([17; 32]);
     let mut rng = thread_rng();
     let report = Report {
+        task_id: if version == DapVersion::Draft02 {
+            Some(task_id.clone())
+        } else {
+            None
+        },
         report_metadata: ReportMetadata {
             id: ReportId(rng.gen()),
             time: rng.gen(),
@@ -53,9 +59,14 @@ fn parse_report_id_hex_from_report(version: DapVersion) {
         encrypted_input_shares: Vec::default(),
     };
 
-    let task_id = Id([17; 32]);
+    let prefix = if version == DapVersion::Draft02 {
+        "02"
+    } else {
+        // This is Draft04 and later
+        "04"
+    };
     let report_hex = hex::encode(report.get_encoded_with_param(&version));
-    let do_hex = format!("{}{}", task_id.to_hex(), report_hex);
+    let do_hex = format!("{}{}{}", prefix, task_id.to_hex(), report_hex);
     let key = report_id_hex_from_report(&do_hex).unwrap();
     assert_eq!(
         ReportId::get_decoded_with_param(&version, &hex::decode(key).unwrap()).unwrap(),

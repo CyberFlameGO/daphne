@@ -313,6 +313,11 @@ async fn e2e_leader_upload(version: DapVersion) {
     let resp = builder
         .body(
             Report {
+                task_id: if version == DapVersion::Draft02 {
+                    Some(t.task_id.clone())
+                } else {
+                    None
+                },
                 report_metadata: ReportMetadata {
                     id: ReportId([1; 16]),
                     time: t.now,
@@ -354,7 +359,7 @@ async fn e2e_leader_upload_taskprov() {
     let t = TestRunner::default_with_version(version).await;
     let client = t.http_client();
     let hpke_config_list = t.get_hpke_configs(version, &client).await;
-    let path = t.upload_path();
+    let path = "upload";
 
     // Generate and upload a report with taskprov.
     //
@@ -399,7 +404,7 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_put_expect_ok(
+    t.leader_post_expect_ok(
         &client,
         &path,
         constants::MEDIA_TYPE_REPORT,
@@ -425,7 +430,7 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_put_expect_abort(
+    t.leader_post_expect_abort(
         &client,
         None, // dap_auth_token
         &path,
@@ -457,7 +462,7 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_put_expect_abort(
+    t.leader_post_expect_abort(
         &client,
         None, // dap_auth_token
         &path,
@@ -506,7 +511,7 @@ async fn e2e_leader_upload_taskprov() {
             version,
         )
         .unwrap();
-    t.leader_put_expect_abort(
+    t.leader_post_expect_abort(
         &client,
         None, // dap_auth_token
         &path,

@@ -233,6 +233,7 @@ impl ParameterizedDecode<DapVersion> for ReportMetadata {
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[allow(missing_docs)]
 pub struct Report {
+    pub task_id: Option<Id>,
     pub report_metadata: ReportMetadata,
     pub public_share: Vec<u8>,
     pub encrypted_input_shares: Vec<HpkeCiphertext>,
@@ -240,6 +241,13 @@ pub struct Report {
 
 impl ParameterizedEncode<DapVersion> for Report {
     fn encode_with_param(&self, version: &DapVersion, bytes: &mut Vec<u8>) {
+        if *version == DapVersion::Draft02 {
+            if let Some(id) = &self.task_id {
+                id.encode(bytes);
+            } else {
+                panic!("Draft02 task id was None")
+            }
+        }
         self.report_metadata.encode_with_param(version, bytes);
         encode_u32_bytes(bytes, &self.public_share);
         encode_u32_items(bytes, &(), &self.encrypted_input_shares);
@@ -251,7 +259,13 @@ impl ParameterizedDecode<DapVersion> for Report {
         version: &DapVersion,
         bytes: &mut Cursor<&[u8]>,
     ) -> Result<Self, CodecError> {
+        let task_id = if *version == DapVersion::Draft02 {
+            Some(Id::decode(bytes)?)
+        } else {
+            None
+        };
         Ok(Self {
+            task_id,
             report_metadata: ReportMetadata::decode_with_param(version, bytes)?,
             public_share: decode_u32_bytes(bytes)?,
             encrypted_input_shares: decode_u32_items(&(), bytes)?,

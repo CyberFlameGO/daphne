@@ -17,8 +17,17 @@ use paste::paste;
 use prio::codec::{Decode, Encode, ParameterizedDecode, ParameterizedEncode};
 use rand::prelude::*;
 
+fn task_id_for_version(version: DapVersion) -> Option<Id> {
+    if version == DapVersion::Draft02 {
+        Some(Id([1; 32]))
+    } else {
+        None
+    }
+}
+
 fn read_report(version: DapVersion) {
     let report = Report {
+        task_id: task_id_for_version(version),
         report_metadata: ReportMetadata {
             id: ReportId([23; 16]),
             time: 1637364244,
@@ -49,6 +58,7 @@ test_versions! {read_report}
 #[test]
 fn read_report_with_unknown_extensions_draft02() {
     let report = Report {
+        task_id: task_id_for_version(DapVersion::Draft02),
         report_metadata: ReportMetadata {
             id: ReportId([23; 16]),
             time: 1637364244,
